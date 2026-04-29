@@ -24,6 +24,8 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     PopupMenu1: TPopupMenu;
+    procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab;
+      AObject: TObject);
     procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex,
       NewIndex: Integer);
     procedure FormCreate(Sender: TObject);
@@ -186,6 +188,23 @@ end;
 procedure TForm1.ExtTabCtrl1TabReordered(Sender: TObject; OldIndex, NewIndex: Integer);
 begin
   ShowMessage(Format('Tab moved from %d to %d', [OldIndex + 1, NewIndex + 1]));
+end;
+
+procedure TForm1.ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab; AObject: TObject);
+var
+  Ptr: Pointer;
+begin
+  Ptr := Pointer(AObject);
+  if PtrUInt(Ptr) < $FFFF then
+  begin
+    Tab.Value := IntToStr(PtrUInt(Ptr));
+    Log(Format('New tab imported, containing an integer (%s)', [Tab.Value]))
+  end
+  else
+  begin
+    Tab.Data := AObject;
+    Log('New tab imported, containing an object')
+  end;
 end;
 
 end.

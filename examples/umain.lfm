@@ -111,6 +111,7 @@ object Form1: TForm1
     OnTabChange = ExtTabCtrl1TabChange
     OnTabClick = ExtTabCtrl1TabClick
     OnTabDblClick = ExtTabCtrl1TabDblClick
+    OnImportTab = ExtTabCtrl1ImportTab
   end
   object ImageList1: TImageList
     Left = 57
