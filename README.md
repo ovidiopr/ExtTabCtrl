@@ -93,6 +93,7 @@ end;
 
 | Event | When fired |
 |---|---|
+| `OnAddButtonClick` | Click on the add button |
 | `OnImportTab` | After a new tab is imported from a TStrings |
 | `OnTabCreating` | Before a new tab is added; allows cancellation and caption/data override |
 | `OnTabCreated` | After a tab (or batch import) is complete |

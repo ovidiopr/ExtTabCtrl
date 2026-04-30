@@ -29,6 +29,7 @@ type
   TTabReorderingEvent = procedure(Sender: TObject; OldIndex, NewIndex: Integer; var Allow: Boolean) of object;
   TTabClickEvent = procedure(Sender: TObject; Index: Integer) of object;
   TTabImportEvent = procedure(Sender: TObject; Tab: TExtTab; AObject: TObject) of object;
+  TButtonClickEvent = procedure(Sender: TObject) of object;
 
   TButtonImages = class(TPersistent)
   private
@@ -163,6 +164,7 @@ type
     FOnTabClick: TTabClickEvent;
     FOnTabDblClick: TTabClickEvent;
     FOnImportTab: TTabImportEvent;
+    FOnAddButtonClick: TButtonClickEvent;
 
     FScrollOffset: Integer;
     FHoverTab, FHoverCloseTab: Integer;
@@ -249,8 +251,7 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseLeave; override;
-    function  DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
-      MousePos: TPoint): Boolean; override;
+    function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
     procedure DblClick; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 
@@ -312,6 +313,7 @@ type
     property OnTabClick: TTabClickEvent read FOnTabClick write FOnTabClick;
     property OnTabDblClick: TTabClickEvent read FOnTabDblClick write FOnTabDblClick;
     property OnImportTab: TTabImportEvent read FOnImportTab write FOnImportTab;
+    property OnAddButtonClick: TButtonClickEvent read FOnAddButtonClick write FOnAddButtonClick;
   end;
 
   TExtTabCtrlEditor = class(TComponentEditor)
@@ -771,6 +773,13 @@ procedure TExtTabCtrl.AddBtnClick(Sender: TObject);
 var
   P: TPoint;
 begin
+  // If the event has been assigned just call it and let the user add the tab
+  if Assigned(FOnAddButtonClick) then
+  begin
+    FOnAddButtonClick(Self);
+    Exit;
+  end;
+
   // If a menu is assigned, show it on left-click
   if Assigned(FBtnAdd.PopupMenu) then
   begin

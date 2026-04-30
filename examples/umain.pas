@@ -24,10 +24,8 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     PopupMenu1: TPopupMenu;
-    procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab;
-      AObject: TObject);
-    procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex,
-      NewIndex: Integer);
+    procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab; AObject: TObject);
+    procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex, NewIndex: Integer);
     procedure FormCreate(Sender: TObject);
 
     // Existing event handlers
