@@ -777,11 +777,9 @@ begin
   if Assigned(FOnAddButtonClick) then
   begin
     FOnAddButtonClick(Self);
-    Exit;
-  end;
-
+  end
   // If a menu is assigned, show it on left-click
-  if Assigned(FBtnAdd.PopupMenu) then
+  else if Assigned(FBtnAdd.PopupMenu) then
   begin
     P := FBtnAdd.ClientToScreen(Point(0, FBtnAdd.Height));
     FBtnAdd.PopupMenu.PopUp(P.X, P.Y);
@@ -2525,6 +2523,7 @@ var
   Allow: Boolean;
   Cap: String;
   Data: TObject;
+  NewIndex: Integer;
 begin
   Result := nil;
   if FInternalChange > 0 then Exit;
@@ -2537,12 +2536,13 @@ begin
   begin
     if Assigned(FOnTabCreating) then
       FOnTabCreating(Self, Cap, Data, Allow);
-    // User callback may have destroyed or mutated us — revalidate
+    // User callback may have destroyed or mutated us --> revalidate
     if csDestroying in ComponentState then Exit;
   end;
 
   if not Allow then Exit;
 
+  NewIndex := -1;
   BeginInternalChange;
   try
     Result := FTabs.Add(Cap);
@@ -2552,10 +2552,13 @@ begin
     InvalidateLayout;
 
     if toActivateNewTab in FTabOptions then
-      FTabIndex := Result.Index; // set directly — avoids triggering SetTabIndex events
+      NewIndex := Result.Index;
   finally
     EndInternalChange;
   end;
+
+  if NewIndex >= 0 then
+    SetTabIndex(NewIndex);
 
   if not FImportActive then
   begin
