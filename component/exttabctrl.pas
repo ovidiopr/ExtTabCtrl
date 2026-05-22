@@ -16,7 +16,7 @@ type
 
   TExtTabOption = (toActivateNewTab, toShowCloseButton, toShowAddButton,
                    toCloseOnMiddleClick, toAllowDragReorder,
-                   toRotateTabImages, toRotateAddImage);
+                   toRotateTabImages, toRotateAddImage, toGetFocus);
   TExtTabOptions = set of TExtTabOption;
 
   TExtTab = class;
@@ -172,7 +172,6 @@ type
     FBtnScrollPrev, FBtnScrollNext: TSpeedButton;
     FScrollImages: array[0..1] of TBitmap;
 
-    FDrawTmpBmp: TBitmap;
     FCachedAddGlyph: TBitmap;
     FCachedScrollGlyphs: array[0..1] of TBitmap;
     FLastRotation: Integer;
@@ -207,7 +206,6 @@ type
     procedure ButtonImagesChanged(Sender: TObject);
     function TabsViewportRect: TRect;
     procedure UpdateButtonLayout;
-    procedure UpdateAddButtonBounds;
     function IsVertical: Boolean;
     function IsHorizontal: Boolean;
     function CloseButtonRect(Tab: TExtTab): TRect;
@@ -287,7 +285,7 @@ type
     property TabOptions: TExtTabOptions read FTabOptions write SetTabOptions
                            default [toActivateNewTab, toShowCloseButton,
                                     toShowAddButton, toCloseOnMiddleClick,
-                                    toAllowDragReorder];
+                                    toAllowDragReorder, toGetFocus];
     property TabPosition: TTabPosition
       read FTabPosition write SetTabPosition default tpTop;
 
@@ -794,15 +792,10 @@ end;
 procedure TExtTabCtrl.ScrollPrev(Sender: TObject);
 var
   i: Integer;
-  V: TRect;
   VisibleStart: Integer;
 begin
-  V := TabsViewportRect;
   // Find the first tab that starts before the current scroll position and scroll to show it
-  if IsHorizontal then
-    VisibleStart := FScrollOffset
-  else
-    VisibleStart := FScrollOffset;
+  VisibleStart := FScrollOffset;
 
   for i := FTabs.Count - 1 downto 0 do
   begin
@@ -980,13 +973,13 @@ begin
   begin
     if FBtnScrollPrev.Visible then Inc(Result.Left, FBtnScrollPrev.Width);
     if FBtnScrollNext.Visible then Dec(Result.Right, FBtnScrollNext.Width);
-    Dec(Result.Right, FBtnAdd.Width);
+    if FBtnAdd.Visible then Dec(Result.Right, FBtnAdd.Width);
   end
   else
   begin
     if FBtnScrollPrev.Visible then Inc(Result.Top, FBtnScrollPrev.Height);
     if FBtnScrollNext.Visible then Dec(Result.Bottom, FBtnScrollNext.Height);
-    Dec(Result.Bottom, FBtnAdd.Height);
+    if FBtnAdd.Visible then Dec(Result.Bottom, FBtnAdd.Height);
   end;
 end;
 
@@ -1061,39 +1054,6 @@ begin
     FLayoutDirty := True;
   finally
     Self.EnableAlign;
-    FUpdatingButtons := False;
-  end;
-end;
-
-procedure TExtTabCtrl.UpdateAddButtonBounds;
-var
-  ScaledTabSize, ScaledBtnW: Integer;
-begin
-  if FUpdatingButtons or not HandleAllocated then Exit;
-  FUpdatingButtons := True;
-  try
-    ScaledTabSize := GetScale(FTabSize);
-    ScaledBtnW := GetScale(24); // The length of the Add button
-
-    if IsHorizontal then
-    begin
-      // If tpTop: Y = 0. If tpBottom: Y = ClientHeight - ScaledTabSize
-      if FTabPosition = tpTop then
-        FBtnAdd.SetBounds(ClientWidth - ScaledBtnW, 0, ScaledBtnW, ScaledTabSize)
-      else
-        FBtnAdd.SetBounds(ClientWidth - ScaledBtnW, ClientHeight -
-          ScaledTabSize, ScaledBtnW, ScaledTabSize);
-    end
-    else
-    begin
-      // If tpLeft: X = 0. If tpRight: X = ClientWidth - ScaledTabSize
-      if FTabPosition = tpLeft then
-        FBtnAdd.SetBounds(0, ClientHeight - ScaledBtnW, ScaledTabSize, ScaledBtnW)
-      else
-        FBtnAdd.SetBounds(ClientWidth - ScaledTabSize, ClientHeight -
-          ScaledBtnW, ScaledTabSize, ScaledBtnW);
-    end;
-  finally
     FUpdatingButtons := False;
   end;
 end;
@@ -1946,10 +1906,10 @@ begin
 
     // Check for ImageList + ImageIndex
     if Assigned(FImages) and (FTabs[i].ImageIndex >= 0) then
-      ImgExtent := GetScale(FImages.Width) + GetScale(cImageSpacing)
+      ImgExtent := FImages.Width + GetScale(cImageSpacing)
     // Fallback to the standalone TBitmap property
     else if Assigned(FTabs[i].FImage) and not FTabs[i].FImage.Empty then
-      ImgExtent := GetScale(FTabs[i].Image.Width) + GetScale(cImageSpacing);
+      ImgExtent := FTabs[i].Image.Width + GetScale(cImageSpacing);
 
     if (toShowCloseButton in FTabOptions) and Assigned(FCloseImage) and not FCloseImage.Empty then
     begin
@@ -2142,7 +2102,8 @@ begin
 
   if Button = mbLeft then
   begin
-    SetFocus;
+    if toGetFocus in FTabOptions then
+      SetFocus;
     TabIndex := Idx;
   end;
 end;
@@ -2697,7 +2658,7 @@ begin
   FTabPosition := tpTop;
   FTabSize := 26;
   FTabOptions := [toActivateNewTab, toShowCloseButton, toShowAddButton,
-                  toCloseOnMiddleClick, toAllowDragReorder];
+                  toCloseOnMiddleClick, toAllowDragReorder, toGetFocus];
 
   FAddImage := TBitmap.Create;
   FCloseImage := TBitmap.Create;
@@ -2736,7 +2697,6 @@ begin
   FBtnScrollNext.ShowHint := ShowHint;
   FBtnScrollNext.OnClick := @ScrollNext;
 
-  FDrawTmpBmp := TBitmap.Create;
   FCachedAddGlyph := TBitmap.Create;
   FCachedScrollGlyphs[0] := TBitmap.Create;
   FCachedScrollGlyphs[1] := TBitmap.Create;
@@ -2764,7 +2724,6 @@ begin
   FreeAndNil(FBtnScrollPrev);
   FreeAndNil(FBtnScrollNext);
 
-  FreeAndNil(FDrawTmpBmp);
   FreeAndNil(FCachedAddGlyph);
   FreeAndNil(FCachedScrollGlyphs[0]);
   FreeAndNil(FCachedScrollGlyphs[1]);
