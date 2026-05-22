@@ -158,7 +158,7 @@ type
     FOnTabDeleting: TTabIndexAllowEvent;
     FOnTabDeleted: TNotifyEvent;
     FOnTabChanging: TTabChangingEvent;
-    FOnTabChange: TTabChangedEvent;
+    FOnTabChanged: TTabChangedEvent;
     FOnTabReordering: TTabReorderingEvent;
     FOnTabReordered: TTabReorderedEvent;
     FOnTabClick: TTabClickEvent;
@@ -307,7 +307,7 @@ type
     property OnTabDeleting: TTabIndexAllowEvent read FOnTabDeleting write FOnTabDeleting;
     property OnTabDeleted: TNotifyEvent read FOnTabDeleted write FOnTabDeleted;
     property OnTabChanging: TTabChangingEvent read FOnTabChanging write FOnTabChanging;
-    property OnTabChange: TTabChangedEvent read FOnTabChange write FOnTabChange;
+    property OnTabChanged: TTabChangedEvent read FOnTabChanged write FOnTabChanged;
     property OnTabClick: TTabClickEvent read FOnTabClick write FOnTabClick;
     property OnTabDblClick: TTabClickEvent read FOnTabDblClick write FOnTabDblClick;
     property OnImportTab: TTabImportEvent read FOnImportTab write FOnImportTab;
@@ -527,8 +527,8 @@ begin
     FVisible := AValue;
     FOwnerCtrl.FTabIndex := Candidate;
     FOwnerCtrl.InvalidateLayout;
-    if Assigned(FOwnerCtrl.FOnTabChange) then
-      FOwnerCtrl.FOnTabChange(FOwnerCtrl, Candidate);
+    if Assigned(FOwnerCtrl.FOnTabChanged) then
+      FOwnerCtrl.FOnTabChanged(FOwnerCtrl, Candidate);
   end
   else
   begin
@@ -749,9 +749,9 @@ begin
     EndInternalChange;
   end;
 
-  if Assigned(FOnTabChange) then
+  if Assigned(FOnTabChanged) then
   begin
-    FOnTabChange(Self, FTabIndex);
+    FOnTabChanged(Self, FTabIndex);
     if csDestroying in ComponentState then Exit;
   end;
 
@@ -2597,9 +2597,9 @@ begin
     if csDestroying in ComponentState then Exit;
   end;
 
-  // Fire OnTabChange if the active tab changed
-  if ((NewIndex <> OldIndex) or (Index = OldIndex)) and Assigned(FOnTabChange) then
-    FOnTabChange(Self, FTabIndex);
+  // Fire OnTabChanged if the active tab changed
+  if ((NewIndex <> OldIndex) or (Index = OldIndex)) and Assigned(FOnTabChanged) then
+    FOnTabChanged(Self, FTabIndex);
 
   InvalidateLayout;
 end;
