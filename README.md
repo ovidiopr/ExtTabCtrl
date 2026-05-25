@@ -100,7 +100,7 @@ end;
 | `OnTabDeleting` | Before a tab is deleted; allows cancellation |
 | `OnTabDeleted` | After a tab has been deleted |
 | `OnTabChanging` | Before the active tab changes; allows cancellation |
-| `OnTabChange` | After the active tab changes |
+| `OnTabChanged` | After the active tab changes |
 | `OnTabClick` | Single left-click on a tab |
 | `OnTabDblClick` | Double-click on a tab |
 | `OnTabReordering` | Before a drag-reorder is applied; allows cancellation |
