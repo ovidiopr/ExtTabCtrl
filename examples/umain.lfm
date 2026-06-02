@@ -2,34 +2,35 @@ object Form1: TForm1
   Left = 431
   Height = 240
   Top = 257
-  Width = 337
+  Width = 368
+  ActiveControl = ExtTabCtrl1
   Caption = 'Form1'
   ClientHeight = 240
-  ClientWidth = 337
+  ClientWidth = 368
   ParentBiDiMode = False
-  LCLVersion = '4.4.0.0'
+  LCLVersion = '4.6.0.0'
   OnCreate = FormCreate
   object GroupBox1: TGroupBox
     Left = 0
     Height = 206
     Top = 34
-    Width = 337
+    Width = 368
     Align = alClient
-    ClientHeight = 186
-    ClientWidth = 333
+    ClientHeight = 179
+    ClientWidth = 358
     TabOrder = 0
     object lblStyle: TLabel
       Left = 24
-      Height = 15
+      Height = 16
       Top = 36
-      Width = 28
+      Width = 34
       Caption = 'Style:'
     end
     object cbStyle: TComboBox
       Left = 80
-      Height = 23
+      Height = 19
       Top = 32
-      Width = 246
+      Width = 271
       Anchors = [akTop, akLeft, akRight]
       AutoComplete = True
       AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
@@ -49,16 +50,16 @@ object Form1: TForm1
     end
     object lblPos: TLabel
       Left = 16
-      Height = 15
+      Height = 16
       Top = 4
-      Width = 46
+      Width = 52
       Caption = 'Position:'
     end
     object cbPos: TComboBox
       Left = 80
-      Height = 23
+      Height = 19
       Top = 0
-      Width = 247
+      Width = 272
       Anchors = [akTop, akLeft, akRight]
       ItemHeight = 15
       ItemIndex = 0
@@ -75,9 +76,9 @@ object Form1: TForm1
     end
     object MemoLog: TMemo
       Left = 8
-      Height = 109
+      Height = 102
       Top = 71
-      Width = 319
+      Width = 344
       Anchors = [akTop, akLeft, akRight, akBottom]
       ScrollBars = ssAutoBoth
       TabOrder = 2
@@ -87,7 +88,7 @@ object Form1: TForm1
     Left = 0
     Height = 34
     Top = 0
-    Width = 337
+    Width = 368
     Align = alTop
     DoubleBuffered = True
     Tabs = <    
@@ -95,10 +96,14 @@ object Form1: TForm1
         Caption = 'Test tabs'
         ImageIndex = 3
         Hint = 'Test the hint'
+      end    
+      item
+        Caption = 'New test'
+        ImageIndex = 4
       end>
     TabIndex = 0
     TabSize = 30
-    TabOptions = [toActivateNewTab, toShowCloseButton, toShowAddButton, toCloseOnMiddleClick, toAllowDragReorder, toRotateTabImages, toRotateAddImage]
+    TabOptions = [toActivateNewTab, toShowCloseButton, toShowAddButton, toCloseOnMiddleClick, toAllowDragReorder, toRotateTabImages, toRotateAddImage, toGetFocus, toActiveBold]
     Images = ImageList1
     AddMenu = PopupMenu1
     OnTabReordering = ExtTabCtrl1TabReordering
@@ -108,7 +113,7 @@ object Form1: TForm1
     OnTabDeleting = ExtTabCtrl1TabDeleting
     OnTabDeleted = ExtTabCtrl1TabDeleted
     OnTabChanging = ExtTabCtrl1TabChanging
-    OnTabChange = ExtTabCtrl1TabChange
+    OnTabChanged = ExtTabCtrl1TabChanged
     OnTabClick = ExtTabCtrl1TabClick
     OnTabDblClick = ExtTabCtrl1TabDblClick
     OnImportTab = ExtTabCtrl1ImportTab

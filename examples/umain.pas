@@ -29,7 +29,7 @@ type
     procedure FormCreate(Sender: TObject);
 
     // Existing event handlers
-    procedure ExtTabCtrl1TabChange(Sender: TObject; NewIndex: Integer);
+    procedure ExtTabCtrl1TabChanged(Sender: TObject; NewIndex: Integer);
     procedure ExtTabCtrl1TabReordering(Sender: TObject; OldIndex, NewIndex: Integer; var Allow: Boolean);
     procedure ExtTabCtrl1TabCreating(Sender: TObject; var ACaption: string; var Data: TObject; var Allow: Boolean);
     procedure ExtTabCtrl1TabCreated(Sender: TObject);
@@ -68,6 +68,7 @@ begin
 
   ExtTabCtrl1.Tabs[0].Color := clRed;
   ExtTabCtrl1.Tabs[1].Color := clGreen;
+  ExtTabCtrl1.Tabs[2].Color := clBlue;
 
   cbStyle.ItemIndex := Integer(ExtTabCtrl1.TabStyle);
   cbPos.ItemIndex := Integer(ExtTabCtrl1.TabPosition);
@@ -80,8 +81,6 @@ begin
   if Assigned(MemoLog) then
     MemoLog.Lines.Add(FormatDateTime('hh:nn:ss.zzz', Now) + ' > ' + Msg);
 end;
-
-{ --- New Event Implementations --- }
 
 procedure TForm1.ExtTabCtrl1TabClick(Sender: TObject; Index: Integer);
 begin
@@ -99,8 +98,6 @@ procedure TForm1.OnAddClick(Sender: TObject);
 begin
   ExtTabCtrl1.AddTab('New Tab ' + IntToStr(ExtTabCtrl1.Tabs.Count + 1));
 end;
-
-{ --- Existing Event Handlers --- }
 
 procedure TForm1.ExtTabCtrl1TabCreating(Sender: TObject; var ACaption: string; var Data: TObject; var Allow: Boolean);
 var
@@ -128,7 +125,7 @@ begin
   Allow := True;
 end;
 
-procedure TForm1.ExtTabCtrl1TabChange(Sender: TObject; NewIndex: Integer);
+procedure TForm1.ExtTabCtrl1TabChanged(Sender: TObject; NewIndex: Integer);
 begin
   if (NewIndex >= 0) and (NewIndex < ExtTabCtrl1.Tabs.Count) then
     Log('Active tab is now: ' + ExtTabCtrl1.Tabs[NewIndex].Caption);
