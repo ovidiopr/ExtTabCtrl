@@ -140,7 +140,6 @@ type
 
   TExtTabCtrl = class(TCustomControl)
   private
-    FAutoSizeTabs: Boolean;
     FUpdateCount: Integer;
     FLayoutDirty: Boolean;
     FUpdatingButtons: Boolean;
@@ -245,7 +244,6 @@ type
     cDragThreshold = 6;
 
     class function GetControlClassDefaultSize: TSize; override;
-    procedure SetAutoSizeTabs(AValue: Boolean);
 
     procedure Paint; override;
     procedure Resize; override;
@@ -290,10 +288,10 @@ type
     procedure SetDesignTabIndex(AValue: Integer);
   published
     property Align;
+    property AutoSize;
     property BorderSpacing;
     property Color default clForm;
     property DoubleBuffered;
-    property AutoSizeTabs: Boolean read FAutoSizeTabs write SetAutoSizeTabs default False;
     property Tabs: TExtTabs read FTabs write SetTabs;
     property TabIndex: Integer read FTabIndex write SetTabIndex default -1;
     property TabSize: Integer read FTabSize write SetTabSize default 26;
@@ -782,15 +780,6 @@ class function TExtTabCtrl.GetControlClassDefaultSize: TSize;
 begin
   Result.cx := 300;
   Result.cy := 30;
-end;
-
-// AutoSizeTabs restricts the control to the tab-strip thickness
-procedure TExtTabCtrl.SetAutoSizeTabs(AValue: Boolean);
-begin
-  if FAutoSizeTabs = AValue then Exit;
-  FAutoSizeTabs := AValue;
-  InvalidatePreferredSize;
-  AdjustSize;
 end;
 
 function TExtTabCtrl.NextVisibleTab(FromIndex: Integer): Integer;
@@ -1474,7 +1463,7 @@ var
   SavedOrientation: Integer;
 begin
   SavedOrientation := ACanvas.Font.Orientation;
-  ACanvas.Font.Orientation := Degrees * 10;
+  ACanvas.Font.Orientation := Degrees*10;
 
   if Degrees = 90 then
     // 90°: anchor is Bottom-Left
@@ -1629,8 +1618,7 @@ begin
     Dest.Clear;
 end;
 
-procedure TExtTabCtrl.DrawCloseButton(ACanvas: TCanvas;
-  const R: TRect; Tab: TExtTab; IsActive: Boolean);
+procedure TExtTabCtrl.DrawCloseButton(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; IsActive: Boolean);
 var
   CloseR: TRect;
 begin
@@ -2058,7 +2046,7 @@ begin
 
   Canvas.Font.Assign(Font);
   Pos := 0;
-  Padding := GetScale(cContentIndent) * 2;
+  Padding := GetScale(cContentIndent)*2;
 
   for i := 0 to FTabs.Count - 1 do
   begin
@@ -2305,7 +2293,7 @@ begin
     Exit; // Bypass runtime mouse tracking actions
   end;
 
-inherited MouseDown(Button, Shift, X, Y);
+  inherited MouseDown(Button, Shift, X, Y);
 
   Idx := TabAtPos(X, Y);
   FMouseDownPos := Point(X, Y);
@@ -2685,36 +2673,18 @@ procedure TExtTabCtrl.CalculatePreferredSize(var PreferredWidth, PreferredHeight
 var
   ScaledSize: Integer;
 begin
-  if FAutoSizeTabs then
+  // Clamp the control to exactly the tab-strip thickness
+  // Return 0 for the free dimension so the LCL leaves it alone
+  ScaledSize := GetScale(FTabSize);
+  if IsHorizontal then
   begin
-    // AutoSizeTabs --> clamp the control to exactly the tab-strip thickness
-    // Return 0 for the free dimension so the LCL leaves it alone
-    ScaledSize := GetScale(FTabSize);
-    if IsHorizontal then
-    begin
-      PreferredWidth := 0;            // user controls width freely
-      PreferredHeight := ScaledSize;  // height = one tab row
-    end
-    else
-    begin
-      PreferredWidth := ScaledSize;   // width = one tab column
-      PreferredHeight := 0;           // user controls height freely
-    end;
+    PreferredWidth := 0;            // user controls width freely
+    PreferredHeight := ScaledSize;  // height = one tab row
   end
   else
   begin
-    // Normal (non-autosize) mode: return a reasonable default size
-    // but don't force the control to any particular size
-    if IsHorizontal then
-    begin
-      PreferredWidth := GetScale(200);
-      PreferredHeight := GetScale(FTabSize);
-    end
-    else
-    begin
-      PreferredWidth := GetScale(FTabSize);
-      PreferredHeight := GetScale(200);
-    end;
+    PreferredWidth := ScaledSize;   // width = one tab column
+    PreferredHeight := 0;           // user controls height freely
   end;
 end;
 
@@ -2943,7 +2913,6 @@ begin
   FTabStyle := tsFlat;
   FTabPosition := tpTop;
   FTabSize := 26;
-  FAutoSizeTabs := False;
   FTabOptions := [toActivateNewTab, toShowCloseButton, toShowAddButton,
                   toCloseOnMiddleClick, toAllowDragReorder, toGetFocus,
                   toShowFocusRect];
