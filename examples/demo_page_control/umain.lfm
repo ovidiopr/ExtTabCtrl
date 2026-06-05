@@ -11,12 +11,12 @@ object Form1: TForm1
   OnCreate = FormCreate
   object ExtTabCtrl1: TExtTabCtrl
     Left = 0
-    Height = 30
+    Height = 28
     Top = 0
     Width = 320
     Align = alTop
+    AutoSize = True
     DoubleBuffered = True
-    AutoSizeTabs = True
     Tabs = <    
       item
         Caption = 'Style'

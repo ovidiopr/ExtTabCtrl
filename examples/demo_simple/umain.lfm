@@ -1,7 +1,7 @@
 object Form1: TForm1
   Left = 431
   Height = 240
-  Top = 257
+  Top = 133
   Width = 368
   ActiveControl = ExtTabCtrl1
   Caption = 'Form1'
@@ -12,11 +12,11 @@ object Form1: TForm1
   OnCreate = FormCreate
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 206
-    Top = 34
+    Height = 210
+    Top = 30
     Width = 368
     Align = alClient
-    ClientHeight = 179
+    ClientHeight = 183
     ClientWidth = 358
     TabOrder = 0
     object lblStyle: TLabel
@@ -76,7 +76,7 @@ object Form1: TForm1
     end
     object MemoLog: TMemo
       Left = 8
-      Height = 102
+      Height = 106
       Top = 71
       Width = 344
       Anchors = [akTop, akLeft, akRight, akBottom]
@@ -86,10 +86,11 @@ object Form1: TForm1
   end
   object ExtTabCtrl1: TExtTabCtrl
     Left = 0
-    Height = 34
+    Height = 30
     Top = 0
     Width = 368
     Align = alTop
+    AutoSize = True
     DoubleBuffered = True
     Tabs = <    
       item

@@ -208,10 +208,7 @@ begin
     tpLeft: ExtTabCtrl1.Align := alLeft;
     tpRight: ExtTabCtrl1.Align := alRight;
   end;
-  if ExtTabCtrl1.TabPosition in [tpTop, tpBottom] then
-    ExtTabCtrl1.Height := 30
-  else
-    ExtTabCtrl1.Width := 30;
+
   Log('Position changed!');
 end;
 

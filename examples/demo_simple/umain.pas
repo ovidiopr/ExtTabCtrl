@@ -160,10 +160,6 @@ begin
     tpLeft: ExtTabCtrl1.Align := alLeft;
     tpRight: ExtTabCtrl1.Align := alRight;
   end;
-  if ExtTabCtrl1.TabPosition in [tpTop, tpBottom] then
-    ExtTabCtrl1.Height := 34
-  else
-    ExtTabCtrl1.Width := 34;
 end;
 
 procedure TForm1.ExtTabCtrl1TabReordering(Sender: TObject; OldIndex, NewIndex: Integer; var Allow: Boolean);
