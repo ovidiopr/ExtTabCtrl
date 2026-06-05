@@ -268,6 +268,7 @@ type
 
     procedure WMLMGetDlgCode(var Message: TLMessage); message LM_GETDLGCODE;
 
+    procedure CreateWnd; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: Integer; WithImplicitConstraints: Boolean); override;
@@ -2799,6 +2800,12 @@ begin
       if Candidate <> -1 then TabIndex := Candidate;
     end;
   end;
+end;
+
+procedure TExtTabCtrl.CreateWnd;
+begin
+  inherited CreateWnd;
+  AnchorButtons;
 end;
 
 procedure TExtTabCtrl.Loaded;
