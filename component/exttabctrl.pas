@@ -1500,13 +1500,15 @@ begin
   // for the Add button footprint even though FBtnAdd.Visible = False.
   if IsHorizontal then
   begin
+    Avail := ClientWidth;
     if (csDesigning in ComponentState) or FBtnAdd.Visible then
-      Avail := ClientWidth - FBtnAdd.Width;
+      Avail := Avail - FBtnAdd.Width;
   end
   else
   begin
+    Avail := ClientHeight;
     if (csDesigning in ComponentState) or FBtnAdd.Visible then
-      Avail := ClientHeight - FBtnAdd.Height;
+      Avail := Avail - FBtnAdd.Height;
   end;
 
   Can := FTotalTabsSize > Avail;
