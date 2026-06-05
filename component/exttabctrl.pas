@@ -142,7 +142,6 @@ type
   private
     FUpdateCount: Integer;
     FLayoutDirty: Boolean;
-    FUpdatingButtons: Boolean;
     FTabSize: Integer;
     FTotalTabsSize: Integer;
     FTabs: TExtTabs;
@@ -214,7 +213,7 @@ type
 
     procedure ButtonImagesChanged(Sender: TObject);
     function TabsViewportRect: TRect;
-    procedure UpdateButtonLayout;
+    procedure AnchorButtons;
     function IsVertical: Boolean;
     function IsHorizontal: Boolean;
     function CloseButtonRect(Tab: TExtTab): TRect;
@@ -982,18 +981,19 @@ begin
 end;
 
 procedure TExtTabCtrl.SetTabPosition(AValue: TTabPosition);
+var
+  WasVertical, WillBeVertical: Boolean;
+  W, H: Integer;
 begin
   if FTabPosition <> AValue then
   begin
+    WasVertical := FTabPosition in [tpLeft, tpRight];
+    WillBeVertical := AValue in [tpLeft, tpRight];
+
     BeginUpdate;
     try
       FTabPosition := AValue;
       FScrollOffset := 0;
-
-      // Reset alignment to allow UpdateButtonLayout to manually set bounds
-      FBtnAdd.Align := alNone;
-      FBtnScrollPrev.Align := alNone;
-      FBtnScrollNext.Align := alNone;
 
       // Invalidate the glyph cache to trigger a re-rotation of bitmaps
       // matching the new position during the next RefreshGlyphCache call
@@ -1002,12 +1002,25 @@ begin
       // Rotation angle changed --> per-tab image caches are stale
       InvalidateTabImageCaches;
 
-      UpdateButtonLayout;
+      // When crossing between horizontal and vertical swap Width and Height
+      // so the tab strip keeps the same thickness in the new orientation.
+      if WasVertical <> WillBeVertical then
+      begin
+        W := Width;
+        H := Height;
+        SetBounds(Left, Top, H, W);
+      end;
+
+      AnchorButtons;
 
       // Mark the internal layout (tab rects) as dirty
       InvalidateLayout;
+
+      // Tell the LCL autosize engine the preferred size has changed
+      InvalidatePreferredSize;
     finally
       EndUpdate;
+      if AutoSize then AdjustSize;
       Invalidate; // Force a full repaint of the control
     end;
   end;
@@ -1027,7 +1040,7 @@ begin
     FTabs[i].FTextWidth := -1;
     FTabs[i].FTextHeight := -1;
   end;
-  UpdateButtonLayout;
+  AnchorButtons;
   Invalidate;
 end;
 
@@ -1052,7 +1065,7 @@ begin
   FButtonHints.Assign(AValue);
 
   if not (csLoading in ComponentState) then
-    UpdateButtonLayout;
+    AnchorButtons;
 end;
 
 procedure TExtTabCtrl.SetTabs(AValue: TExtTabs);
@@ -1072,13 +1085,14 @@ end;
 
 procedure TExtTabCtrl.ButtonImagesChanged(Sender: TObject);
 begin
-  UpdateButtonLayout;
+  AnchorButtons;
   Invalidate;
 end;
 
 function TExtTabCtrl.TabsViewportRect: TRect;
 var
   ScaledSize: Integer;
+  PrevW, NextW, AddW: Integer;
 begin
   Result := ClientRect;
   ScaledSize := GetScale(FTabSize);
@@ -1090,96 +1104,240 @@ begin
     tpRight: Result.Left := Result.Right - ScaledSize;
   end;
 
-  // Clip the button areas (Scroll/Add)
-  if IsHorizontal then
+  // At design time all buttons are always visible (the designer shows them
+  // regardless of Visible), so always include their footprint.
+  // At runtime, only include visible buttons.
+  if csDesigning in ComponentState then
   begin
-    if FBtnScrollPrev.Visible then Inc(Result.Left, FBtnScrollPrev.Width);
-    if FBtnScrollNext.Visible then Dec(Result.Right, FBtnScrollNext.Width);
-    if FBtnAdd.Visible then Dec(Result.Right, FBtnAdd.Width);
-  end
-  else
-  begin
-    if FBtnScrollPrev.Visible then Inc(Result.Top, FBtnScrollPrev.Height);
-    if FBtnScrollNext.Visible then Dec(Result.Bottom, FBtnScrollNext.Height);
-    if FBtnAdd.Visible then Dec(Result.Bottom, FBtnAdd.Height);
-  end;
-end;
-
-procedure TExtTabCtrl.UpdateButtonLayout;
-var
-  ScaledTabSize: Integer;
-  ScrollW, ScrollH, AddW, AddH: Integer;
-  PrevIdx, NextIdx: Integer;
-begin
-  // Added FUpdateCount check to honor BeginUpdate/EndUpdate blocks
-  if (FUpdateCount > 0) or FUpdatingButtons or
-     (csDestroying in ComponentState) or not HandleAllocated then
-    Exit;
-
-  FUpdatingButtons := True;
-  Self.DisableAlign;
-  try
-    ScaledTabSize := GetScale(FTabSize);
-
-    ScrollW := FScrollImages[0].Width;
-    ScrollH := FScrollImages[0].Height;
-
-    AddW := FAddImage.Width;
-    AddH := FAddImage.Height;
-
-    // Hide the Add button at design time — it has no function there
-    if FBtnAdd.Visible <> ((toShowAddButton in FTabOptions) and
-                            not (csDesigning in ComponentState)) then
-      FBtnAdd.Visible := (toShowAddButton in FTabOptions) and
-                          not (csDesigning in ComponentState);
-
-    PrevIdx := 0;
-    NextIdx := 1;
-
     if IsHorizontal then
     begin
-      if FTabPosition = tpTop then
-      begin
-        FBtnScrollPrev.SetBounds(0, 0, ScrollW, ScaledTabSize);
-        FBtnAdd.SetBounds(ClientWidth - AddW, 0, AddW, ScaledTabSize);
-        FBtnScrollNext.SetBounds(FBtnAdd.Left - ScrollW, 0, ScrollW, ScaledTabSize);
-      end
-      else
-      begin
-        FBtnScrollPrev.SetBounds(0, ClientHeight - ScaledTabSize, ScrollW, ScaledTabSize);
-        FBtnAdd.SetBounds(ClientWidth - AddW, ClientHeight - ScaledTabSize, AddW, ScaledTabSize);
-        FBtnScrollNext.SetBounds(FBtnAdd.Left - ScrollW, ClientHeight - ScaledTabSize, ScrollW, ScaledTabSize);
-      end;
+      PrevW := FBtnScrollPrev.Width;
+      NextW := FBtnScrollNext.Width;
+      AddW := IfThen(toShowAddButton in FTabOptions, FBtnAdd.Width, 0);
+      Inc(Result.Left, PrevW);
+      Dec(Result.Right, NextW + AddW);
     end
     else
     begin
-      if (toRotateAddImage in FTabOptions) and (GetRotationForPosition <> 0) then
-        SwapIntegers(AddW, AddH);
+      PrevW := FBtnScrollPrev.Height;
+      NextW := FBtnScrollNext.Height;
+      AddW := IfThen(toShowAddButton in FTabOptions, FBtnAdd.Height, 0);
+      Inc(Result.Top, PrevW);
+      Dec(Result.Bottom, NextW + AddW);
+    end;
+  end
+  else
+  begin
+    if IsHorizontal then
+    begin
+      if FBtnScrollPrev.Visible then Inc(Result.Left, FBtnScrollPrev.Width);
+      if FBtnScrollNext.Visible then Dec(Result.Right, FBtnScrollNext.Width);
+      if FBtnAdd.Visible then Dec(Result.Right, FBtnAdd.Width);
+    end
+    else
+    begin
+      if FBtnScrollPrev.Visible then Inc(Result.Top, FBtnScrollPrev.Height);
+      if FBtnScrollNext.Visible then Dec(Result.Bottom, FBtnScrollNext.Height);
+      if FBtnAdd.Visible then Dec(Result.Bottom, FBtnAdd.Height);
+    end;
+  end;
+end;
 
-      if FTabPosition = tpLeft then
-      begin
-        FBtnScrollPrev.SetBounds(0, 0, ScaledTabSize, ScrollH);
-        FBtnAdd.SetBounds(0, ClientHeight - AddH, ScaledTabSize, AddH);
-        FBtnScrollNext.SetBounds(0, FBtnAdd.Top - ScrollH, ScaledTabSize, ScrollH);
-      end
-      else
-      begin
-        FBtnScrollPrev.SetBounds(ClientWidth - ScaledTabSize, 0, ScaledTabSize, ScrollH);
-        FBtnAdd.SetBounds(ClientWidth - ScaledTabSize, ClientHeight - AddH, ScaledTabSize, AddH);
-        FBtnScrollNext.SetBounds(ClientWidth - ScaledTabSize, FBtnAdd.Top - ScrollH, ScaledTabSize, ScrollH);
-      end;
+// Sets Anchors on the three buttons so the LCL layout engine keeps them
+// correctly positioned automatically on every resize
+procedure TExtTabCtrl.AnchorButtons;
+var
+  ScaledTabSize: Integer;
+  ScrollW, ScrollH, AddW, AddH: Integer;
+  ShowAdd: Boolean;
+  NextLeft, NextTop: Integer;
+  AddLeft, AddTop: Integer;
+begin
+  if (csDestroying in ComponentState) or not HandleAllocated then Exit;
+
+  ScaledTabSize := GetScale(FTabSize);
+  ScrollW := FScrollImages[0].Width;
+  ScrollH := FScrollImages[0].Height;
+  AddW := FAddImage.Width;
+  AddH := FAddImage.Height;
+
+  // The Add button is always visible at design time
+  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  FBtnAdd.Visible := ShowAdd;
+
+  if IsHorizontal then
+  begin
+    if (toRotateAddImage in FTabOptions) and (GetRotationForPosition <> 0) then
+      SwapIntegers(AddW, AddH);
+
+    // Shared vertical anchor: tpTop --> akTop, tpBottom --> akBottom
+    // Scroll-Prev: left edge, correct vertical strip
+    if (FTabPosition = tpTop) then
+      FBtnScrollPrev.Anchors := [akLeft, akTop]
+    else
+      FBtnScrollPrev.Anchors := [akLeft, akBottom];
+    FBtnScrollPrev.AnchorSide[akLeft].Control := Self;
+    FBtnScrollPrev.AnchorSide[akLeft].Side := asrLeft;
+    if FTabPosition = tpTop then
+    begin
+      FBtnScrollPrev.AnchorSide[akTop].Control := Self;
+      FBtnScrollPrev.AnchorSide[akTop].Side := asrTop;
+      FBtnScrollPrev.SetBounds(0, 0, ScrollW, ScaledTabSize);
+    end
+    else
+    begin
+      FBtnScrollPrev.AnchorSide[akBottom].Control := Self;
+      FBtnScrollPrev.AnchorSide[akBottom].Side := asrBottom;
+      FBtnScrollPrev.SetBounds(0, ClientHeight - ScaledTabSize, ScrollW, ScaledTabSize);
     end;
 
-    RefreshGlyphCache;
-    FBtnScrollPrev.Glyph.Assign(FCachedScrollGlyphs[PrevIdx]);
-    FBtnScrollNext.Glyph.Assign(FCachedScrollGlyphs[NextIdx]);
-    FBtnAdd.Glyph.Assign(FCachedAddGlyph);
+    // Add: right edge, correct vertical strip
+    if (FTabPosition = tpTop) then
+      FBtnAdd.Anchors := [akRight, akTop]
+    else
+      FBtnAdd.Anchors := [akRight, akBottom];
+    FBtnAdd.AnchorSide[akRight].Control := Self;
+    FBtnAdd.AnchorSide[akRight].Side := asrRight;
+    if FTabPosition = tpTop then
+    begin
+      FBtnAdd.AnchorSide[akTop].Control := Self;
+      FBtnAdd.AnchorSide[akTop].Side := asrTop;
+      AddLeft := ClientWidth - AddW;
+      AddTop := 0;
+    end
+    else
+    begin
+      FBtnAdd.AnchorSide[akBottom].Control := Self;
+      FBtnAdd.AnchorSide[akBottom].Side := asrBottom;
+      AddLeft := ClientWidth - AddW;
+      AddTop := ClientHeight - ScaledTabSize;
+    end;
+    FBtnAdd.SetBounds(AddLeft, AddTop, AddW, ScaledTabSize);
 
-    FLayoutDirty := True;
-  finally
-    Self.EnableAlign;
-    FUpdatingButtons := False;
+    // Scroll-Next: right of centre, just left of Add.
+    // Anchor its right side to FBtnAdd's left (runtime) or to the calculated
+    // position (design time, where FBtnAdd.Visible = False and its Left is stale).
+    if (FTabPosition = tpTop) then
+      FBtnScrollNext.Anchors := [akRight, akTop]
+    else
+      FBtnScrollNext.Anchors := [akRight, akBottom];
+    if ShowAdd then
+    begin
+      FBtnScrollNext.AnchorSide[akRight].Control := FBtnAdd;
+      FBtnScrollNext.AnchorSide[akRight].Side := asrLeft;
+    end
+    else
+    begin
+      FBtnScrollNext.AnchorSide[akRight].Control := Self;
+      FBtnScrollNext.AnchorSide[akRight].Side := asrRight;
+    end;
+    if FTabPosition = tpTop then
+    begin
+      FBtnScrollNext.AnchorSide[akTop].Control := Self;
+      FBtnScrollNext.AnchorSide[akTop].Side := asrTop;
+      NextTop := 0;
+    end
+    else
+    begin
+      FBtnScrollNext.AnchorSide[akBottom].Control := Self;
+      FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
+      NextTop := ClientHeight - ScaledTabSize;
+    end;
+    // Compute Left directly from ClientWidth so we never depend on the
+    // committed state of FBtnAdd (which may be stale at design time).
+    NextLeft := ClientWidth - AddW - ScrollW;
+    if not (toShowAddButton in FTabOptions) then
+      NextLeft := ClientWidth - ScrollW;
+    FBtnScrollNext.SetBounds(NextLeft, NextTop, ScrollW, ScaledTabSize);
+  end
+  else
+  begin
+    if (toRotateAddImage in FTabOptions) and (GetRotationForPosition <> 0) then
+      SwapIntegers(AddW, AddH);
+
+    // Shared horizontal anchor: tpLeft --> akLeft, tpRight --> akRight
+    // Scroll-Prev: top of the strip
+    if (FTabPosition = tpLeft) then
+      FBtnScrollPrev.Anchors := [akLeft, akTop]
+    else
+      FBtnScrollPrev.Anchors := [akRight, akTop];
+    FBtnScrollPrev.AnchorSide[akTop].Control := Self;
+    FBtnScrollPrev.AnchorSide[akTop].Side := asrTop;
+    if FTabPosition = tpLeft then
+    begin
+      FBtnScrollPrev.AnchorSide[akLeft].Control := Self;
+      FBtnScrollPrev.AnchorSide[akLeft].Side := asrLeft;
+      FBtnScrollPrev.SetBounds(0, 0, ScaledTabSize, ScrollH);
+    end
+    else
+    begin
+      FBtnScrollPrev.AnchorSide[akRight].Control := Self;
+      FBtnScrollPrev.AnchorSide[akRight].Side := asrRight;
+      FBtnScrollPrev.SetBounds(ClientWidth - ScaledTabSize, 0, ScaledTabSize, ScrollH);
+    end;
+
+    // Add: bottom of the strip
+    if (FTabPosition = tpLeft) then
+      FBtnAdd.Anchors := [akLeft, akBottom]
+    else
+      FBtnAdd.Anchors := [akRight, akBottom];
+    FBtnAdd.AnchorSide[akBottom].Control := Self;
+    FBtnAdd.AnchorSide[akBottom].Side := asrBottom;
+    if FTabPosition = tpLeft then
+    begin
+      FBtnAdd.AnchorSide[akLeft].Control := Self;
+      FBtnAdd.AnchorSide[akLeft].Side := asrLeft;
+      AddLeft := 0;
+      AddTop := ClientHeight - AddH;
+    end
+    else
+    begin
+      FBtnAdd.AnchorSide[akRight].Control := Self;
+      FBtnAdd.AnchorSide[akRight].Side := asrRight;
+      AddLeft := ClientWidth - ScaledTabSize;
+      AddTop := ClientHeight - AddH;
+    end;
+    FBtnAdd.SetBounds(AddLeft, AddTop, ScaledTabSize, AddH);
+
+    // Scroll-Next: just above Add
+    if (FTabPosition = tpLeft) then
+      FBtnScrollNext.Anchors := [akLeft, akBottom]
+    else
+      FBtnScrollNext.Anchors := [akRight, akBottom];
+    if ShowAdd then
+    begin
+      FBtnScrollNext.AnchorSide[akBottom].Control := FBtnAdd;
+      FBtnScrollNext.AnchorSide[akBottom].Side := asrTop;
+    end
+    else
+    begin
+      FBtnScrollNext.AnchorSide[akBottom].Control := Self;
+      FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
+    end;
+    // Compute Top directly so we never depend on the committed state of FBtnAdd
+    NextTop := ClientHeight - AddH - ScrollH;
+    if not (toShowAddButton in FTabOptions) then
+      NextTop := ClientHeight - ScrollH;
+    if FTabPosition = tpLeft then
+    begin
+      FBtnScrollNext.AnchorSide[akLeft].Control := Self;
+      FBtnScrollNext.AnchorSide[akLeft].Side := asrLeft;
+      FBtnScrollNext.SetBounds(0, NextTop, ScaledTabSize, ScrollH);
+    end
+    else
+    begin
+      FBtnScrollNext.AnchorSide[akRight].Control := Self;
+      FBtnScrollNext.AnchorSide[akRight].Side := asrRight;
+      FBtnScrollNext.SetBounds(ClientWidth - ScaledTabSize, NextTop, ScaledTabSize, ScrollH);
+    end;
   end;
+
+  RefreshGlyphCache;
+  FBtnScrollPrev.Glyph.Assign(FCachedScrollGlyphs[0]);
+  FBtnScrollNext.Glyph.Assign(FCachedScrollGlyphs[1]);
+  FBtnAdd.Glyph.Assign(FCachedAddGlyph);
+
+  FLayoutDirty := True;
 end;
 
 function TExtTabCtrl.IsVertical: Boolean;
@@ -1322,7 +1480,7 @@ begin
       FScrollOffset := R.Top - FBtnScrollPrev.Height;
   end;
 
-  // Final safety bounds — clamp BEFORE UpdateScrollButtons uses the value
+  // Final safety bounds: clamp BEFORE UpdateScrollButtons uses the value
   if FScrollOffset < 0 then FScrollOffset := 0;
 
   UpdateScrollButtons;
@@ -1336,12 +1494,20 @@ var
   NewPrevVis, NewNextVis: Boolean;
   HasChanged: Boolean;
 begin
-  if (FUpdateCount > 0) or FUpdatingButtons or not HandleAllocated then Exit;
+  if (FUpdateCount > 0) or not HandleAllocated then Exit;
 
+  // At design time all buttons are always shown, so Avail must still account
+  // for the Add button footprint even though FBtnAdd.Visible = False.
   if IsHorizontal then
-    Avail := ClientWidth - IfThen(FBtnAdd.Visible, FBtnAdd.Width, 0)
+  begin
+    if (csDesigning in ComponentState) or FBtnAdd.Visible then
+      Avail := ClientWidth - FBtnAdd.Width;
+  end
   else
-    Avail := ClientHeight - IfThen(FBtnAdd.Visible, FBtnAdd.Height, 0);
+  begin
+    if (csDesigning in ComponentState) or FBtnAdd.Visible then
+      Avail := ClientHeight - FBtnAdd.Height;
+  end;
 
   Can := FTotalTabsSize > Avail;
   NewPrevVis := Can and (FScrollOffset > 0);
@@ -1355,7 +1521,8 @@ begin
     FBtnScrollPrev.Visible := NewPrevVis;
     FBtnScrollNext.Visible := NewNextVis;
     if not Can then FScrollOffset := 0;
-    UpdateButtonLayout;
+    FLayoutDirty := True;
+    Invalidate;
   end;
 end;
 
@@ -2126,12 +2293,14 @@ var
   IndicatorPos: Integer;
 begin
   if not HandleAllocated then Exit;
+
   Canvas.Brush.Color := Color;
   Canvas.FillRect(ClientRect);
 
   if FTabs.Count = 0 then Exit;
 
   CalcLayout;
+
   View := TabsViewportRect;
   SaveIdx := SaveDC(Canvas.Handle);
   try
@@ -2223,13 +2392,8 @@ begin
   inherited Resize;
   if not HandleAllocated then Exit;
   FLayoutDirty := True;
-  UpdateButtonLayout;
-
   if FUpdateCount = 0 then
-  begin
     CalcLayout;
-    UpdateScrollButtons;
-  end;
   Invalidate;
 end;
 
@@ -2657,7 +2821,7 @@ begin
     FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
   end;
 
-  UpdateButtonLayout;
+  AnchorButtons;
   FLayoutDirty := True;
   Invalidate;
 end;
