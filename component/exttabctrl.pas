@@ -1093,7 +1093,6 @@ end;
 function TExtTabCtrl.TabsViewportRect: TRect;
 var
   ScaledSize: Integer;
-  PrevW, NextW, AddW: Integer;
 begin
   Result := ClientRect;
   ScaledSize := GetScale(FTabSize);
@@ -1105,28 +1104,21 @@ begin
     tpRight: Result.Left := Result.Right - ScaledSize;
   end;
 
-  // At design time all buttons are always visible (the designer shows them
-  // regardless of Visible), so always include their footprint.
-  // At runtime, only include visible buttons.
+  // At design time all buttons are always visible
   if csDesigning in ComponentState then
   begin
     if IsHorizontal then
     begin
-      PrevW := FBtnScrollPrev.Width;
-      NextW := FBtnScrollNext.Width;
-      AddW := IfThen(toShowAddButton in FTabOptions, FBtnAdd.Width, 0);
-      Inc(Result.Left, PrevW);
-      Dec(Result.Right, NextW + AddW);
+      Inc(Result.Left, FBtnScrollPrev.Width);
+      Dec(Result.Right, FBtnScrollNext.Width + FBtnAdd.Width);
     end
     else
     begin
-      PrevW := FBtnScrollPrev.Height;
-      NextW := FBtnScrollNext.Height;
-      AddW := IfThen(toShowAddButton in FTabOptions, FBtnAdd.Height, 0);
-      Inc(Result.Top, PrevW);
-      Dec(Result.Bottom, NextW + AddW);
+      Inc(Result.Top, FBtnScrollPrev.Height);
+      Dec(Result.Bottom, FBtnScrollNext.Height + FBtnAdd.Height);
     end;
   end
+  // At runtime, only include visible buttons
   else
   begin
     if IsHorizontal then
@@ -1149,7 +1141,7 @@ end;
 procedure TExtTabCtrl.AnchorButtons;
 var
   ScaledTabSize: Integer;
-  ScrollW, ScrollH, AddW, AddH: Integer;
+  ScrollPrevW, ScrollPrevH, ScrollNextW, ScrollNextH, AddW, AddH: Integer;
   ShowAdd: Boolean;
   NextLeft, NextTop: Integer;
   AddLeft, AddTop: Integer;
@@ -1157,8 +1149,10 @@ begin
   if (csDestroying in ComponentState) or not HandleAllocated then Exit;
 
   ScaledTabSize := GetScale(FTabSize);
-  ScrollW := FScrollImages[0].Width;
-  ScrollH := FScrollImages[0].Height;
+  ScrollPrevW := FScrollImages[0].Width;
+  ScrollPrevH := FScrollImages[0].Height;
+  ScrollNextW := FScrollImages[1].Width;
+  ScrollNextH := FScrollImages[1].Height;
   AddW := FAddImage.Width;
   AddH := FAddImage.Height;
 
@@ -1183,13 +1177,13 @@ begin
     begin
       FBtnScrollPrev.AnchorSide[akTop].Control := Self;
       FBtnScrollPrev.AnchorSide[akTop].Side := asrTop;
-      FBtnScrollPrev.SetBounds(0, 0, ScrollW, ScaledTabSize);
+      FBtnScrollPrev.SetBounds(0, 0, ScrollPrevW, ScaledTabSize);
     end
     else
     begin
       FBtnScrollPrev.AnchorSide[akBottom].Control := Self;
       FBtnScrollPrev.AnchorSide[akBottom].Side := asrBottom;
-      FBtnScrollPrev.SetBounds(0, ClientHeight - ScaledTabSize, ScrollW, ScaledTabSize);
+      FBtnScrollPrev.SetBounds(0, ClientHeight - ScaledTabSize, ScrollPrevW, ScaledTabSize);
     end;
 
     // Add: right edge, correct vertical strip
@@ -1244,12 +1238,10 @@ begin
       FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
       NextTop := ClientHeight - ScaledTabSize;
     end;
-    // Compute Left directly from ClientWidth so we never depend on the
-    // committed state of FBtnAdd (which may be stale at design time).
-    NextLeft := ClientWidth - AddW - ScrollW;
-    if not (toShowAddButton in FTabOptions) then
-      NextLeft := ClientWidth - ScrollW;
-    FBtnScrollNext.SetBounds(NextLeft, NextTop, ScrollW, ScaledTabSize);
+    NextLeft := ClientWidth - ScrollNextW;
+    if ShowAdd then
+      NextLeft := ClientWidth - AddW;
+    FBtnScrollNext.SetBounds(NextLeft, NextTop, ScrollNextW, ScaledTabSize);
   end
   else
   begin
@@ -1268,13 +1260,13 @@ begin
     begin
       FBtnScrollPrev.AnchorSide[akLeft].Control := Self;
       FBtnScrollPrev.AnchorSide[akLeft].Side := asrLeft;
-      FBtnScrollPrev.SetBounds(0, 0, ScaledTabSize, ScrollH);
+      FBtnScrollPrev.SetBounds(0, 0, ScaledTabSize, ScrollPrevH);
     end
     else
     begin
       FBtnScrollPrev.AnchorSide[akRight].Control := Self;
       FBtnScrollPrev.AnchorSide[akRight].Side := asrRight;
-      FBtnScrollPrev.SetBounds(ClientWidth - ScaledTabSize, 0, ScaledTabSize, ScrollH);
+      FBtnScrollPrev.SetBounds(ClientWidth - ScaledTabSize, 0, ScaledTabSize, ScrollPrevH);
     end;
 
     // Add: bottom of the strip
@@ -1315,21 +1307,20 @@ begin
       FBtnScrollNext.AnchorSide[akBottom].Control := Self;
       FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
     end;
-    // Compute Top directly so we never depend on the committed state of FBtnAdd
-    NextTop := ClientHeight - AddH - ScrollH;
-    if not (toShowAddButton in FTabOptions) then
-      NextTop := ClientHeight - ScrollH;
+    NextTop := ClientHeight - ScrollNextH;
+    if ShowAdd then
+      NextTop := ClientHeight - AddH;
     if FTabPosition = tpLeft then
     begin
       FBtnScrollNext.AnchorSide[akLeft].Control := Self;
       FBtnScrollNext.AnchorSide[akLeft].Side := asrLeft;
-      FBtnScrollNext.SetBounds(0, NextTop, ScaledTabSize, ScrollH);
+      FBtnScrollNext.SetBounds(0, NextTop, ScaledTabSize, ScrollNextH);
     end
     else
     begin
       FBtnScrollNext.AnchorSide[akRight].Control := Self;
       FBtnScrollNext.AnchorSide[akRight].Side := asrRight;
-      FBtnScrollNext.SetBounds(ClientWidth - ScaledTabSize, NextTop, ScaledTabSize, ScrollH);
+      FBtnScrollNext.SetBounds(ClientWidth - ScaledTabSize, NextTop, ScaledTabSize, ScrollNextH);
     end;
   end;
 
