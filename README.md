@@ -138,6 +138,14 @@ The `Data: TObject` property is a non-owning reference. The component will **nev
 
 ---
 
+## Screenshots
+
+![macOS Style](images/Screenshot01.png)
+![Flat Style](images/Screenshot02.png)
+![Flat Style, with images on Tabs](images/Screenshot03.png)
+![macOS Style, with images on Tabs](images/Screenshot04.png)
+![Chrome Style, coupled with a TNotebook](images/Screenshot05.png)
+
 ## License
 
 This component is released under the **GNU Lesser General Public License v2.1 or later (LGPL-2.1-or-later)**.
