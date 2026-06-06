@@ -1,6 +1,6 @@
 # ExtTabCtrl
 
-A custom tab control component for [Lazarus](https://www.lazarus-ide.org/) / Free Pascal, which can be used as a replacement for `TPageControl` and `TTabControl`.
+A feature-rich custom tab control for [Lazarus](https://www.lazarus-ide.org/) / Free Pascal, including Chrome, MacOS, and Delphi styles with drag-reordering and vertical orientation support. It can be used as a replacement for `TPageControl` and `TTabControl`.
 
 ---
 
