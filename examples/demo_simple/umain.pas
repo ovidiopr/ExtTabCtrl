@@ -66,9 +66,9 @@ begin
   ExtTabCtrl1.AddTab('FreePascal');
   ExtTabCtrl1.AddTab('Standalone');
 
-  ExtTabCtrl1.Tabs[0].Color := clRed;
-  ExtTabCtrl1.Tabs[1].Color := clGreen;
-  ExtTabCtrl1.Tabs[2].Color := clBlue;
+  ExtTabCtrl1.Tabs[0].StripeColor := clRed;
+  ExtTabCtrl1.Tabs[1].StripeColor := clGreen;
+  ExtTabCtrl1.Tabs[2].StripeColor := clBlue;
 
   cbStyle.ItemIndex := Integer(ExtTabCtrl1.TabStyle);
   cbPos.ItemIndex := Integer(ExtTabCtrl1.TabPosition);
