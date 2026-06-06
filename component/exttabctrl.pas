@@ -2219,7 +2219,7 @@ begin
     if (Tab.Index < FTabs.Count - 1) and (Tab.Index <> FTabIndex) and
       (Tab.Index <> FTabIndex - 1) then
     begin
-      ACanvas.Pen.Color := BlendColors(BaseClr, clBlack, 0.05); // Barely visible line
+      ACanvas.Pen.Color := BlendColors(Color, clBlack, 0.05); // Barely visible line
       ACanvas.MoveTo(R.Right - 1, R.Top + GetScale(7));
       ACanvas.LineTo(R.Right - 1, R.Bottom - GetScale(7));
     end;
