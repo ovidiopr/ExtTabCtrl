@@ -34,10 +34,10 @@ type
 
   TButtonImages = class(TPersistent)
   private
-    FPrevImageIndex: TImageIndex;
-    FNextImageIndex: TImageIndex;
-    FAddImageIndex: TImageIndex;
-    FCloseImageIndex: TImageIndex;
+    FPrevIndex: TImageIndex;
+    FNextIndex: TImageIndex;
+    FAddIndex: TImageIndex;
+    FCloseIndex: TImageIndex;
 
     FOnChange: TNotifyEvent;
     procedure SetIndex(Index: Integer; Value: TImageIndex);
@@ -46,10 +46,10 @@ type
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
-    property PrevImageIndex: TImageIndex index 0 read FPrevImageIndex write SetIndex default -1;
-    property NextImageIndex: TImageIndex index 1 read FNextImageIndex write SetIndex default -1;
-    property AddImageIndex: TImageIndex index 2 read FAddImageIndex write SetIndex default -1;
-    property CloseImageIndex: TImageIndex index 3 read FCloseImageIndex write SetIndex default -1;
+    property PrevIndex: TImageIndex index 0 read FPrevIndex write SetIndex default -1;
+    property NextIndex: TImageIndex index 1 read FNextIndex write SetIndex default -1;
+    property AddIndex: TImageIndex index 2 read FAddIndex write SetIndex default -1;
+    property CloseIndex: TImageIndex index 3 read FCloseIndex write SetIndex default -1;
   end;
 
   TButtonHints = class(TPersistent)
@@ -86,11 +86,11 @@ type
 
   TImagesWidth = class(TPersistent)
   private
-    FPrevImageWidth: Integer;
-    FNextImageWidth: Integer;
-    FAddImageWidth: Integer;
-    FCloseImageWidth: Integer;
-    FTabImagesWidth: Integer;
+    FPrevWidth: Integer;
+    FNextWidth: Integer;
+    FAddWidth: Integer;
+    FCloseWidth: Integer;
+    FTabWidth: Integer;
 
     FOnChange: TNotifyEvent;
     procedure SetWidth(Index, Value: Integer);
@@ -99,11 +99,11 @@ type
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
-    property PrevImageWidth: Integer index 0 read FPrevImageWidth write SetWidth default 16;
-    property NextImageWidth: Integer index 1 read FNextImageWidth write SetWidth default 16;
-    property AddImageWidth: Integer index 2 read FAddImageWidth write SetWidth default 16;
-    property CloseImageWidth: Integer index 3 read FCloseImageWidth write SetWidth default 16;
-    property TabImagesWidth: Integer index 4 read FTabImagesWidth write SetWidth default 24;
+    property PrevWidth: Integer index 0 read FPrevWidth write SetWidth default 16;
+    property NextWidth: Integer index 1 read FNextWidth write SetWidth default 16;
+    property AddWidth: Integer index 2 read FAddWidth write SetWidth default 16;
+    property CloseWidth: Integer index 3 read FCloseWidth write SetWidth default 16;
+    property TabsWidth: Integer index 4 read FTabWidth write SetWidth default 24;
   end;
 
   TExtTabCtrl = class;
@@ -453,20 +453,20 @@ end;
 { TButtonImages }
 constructor TButtonImages.Create;
 begin
-  FPrevImageIndex := -1;
-  FNextImageIndex := -1;
-  FAddImageIndex := -1;
-  FCloseImageIndex := -1;
+  FPrevIndex := -1;
+  FNextIndex := -1;
+  FAddIndex := -1;
+  FCloseIndex := -1;
 end;
 
 procedure TButtonImages.Assign(Source: TPersistent);
 begin
   if Source is TButtonImages then
   begin
-    FPrevImageIndex := TButtonImages(Source).PrevImageIndex;
-    FNextImageIndex := TButtonImages(Source).NextImageIndex;
-    FAddImageIndex := TButtonImages(Source).AddImageIndex;
-    FCloseImageIndex := TButtonImages(Source).CloseImageIndex;
+    FPrevIndex := TButtonImages(Source).PrevIndex;
+    FNextIndex := TButtonImages(Source).NextIndex;
+    FAddIndex := TButtonImages(Source).AddIndex;
+    FCloseIndex := TButtonImages(Source).CloseIndex;
     if Assigned(FOnChange) then FOnChange(Self);
   end
   else
@@ -479,10 +479,10 @@ var
 begin
   Ptr := nil;
   case Index of
-    0: Ptr := @FPrevImageIndex;
-    1: Ptr := @FNextImageIndex;
-    2: Ptr := @FAddImageIndex;
-    3: Ptr := @FCloseImageIndex;
+    0: Ptr := @FPrevIndex;
+    1: Ptr := @FNextIndex;
+    2: Ptr := @FAddIndex;
+    3: Ptr := @FCloseIndex;
   end;
   if Ptr = nil then Exit;
   if Ptr^ <> Value then
@@ -550,22 +550,22 @@ end;
 { TImagesWidth }
 constructor TImagesWidth.Create;
 begin
-  FPrevImageWidth := 16;
-  FNextImageWidth := 16;
-  FAddImageWidth := 16;
-  FCloseImageWidth := 16;
-  FTabImagesWidth := 24;
+  FPrevWidth := 16;
+  FNextWidth := 16;
+  FAddWidth := 16;
+  FCloseWidth := 16;
+  FTabWidth := 24;
 end;
 
 procedure TImagesWidth.Assign(Source: TPersistent);
 begin
   if Source is TImagesWidth then
   begin
-    FPrevImageWidth := TImagesWidth(Source).PrevImageWidth;
-    FNextImageWidth := TImagesWidth(Source).NextImageWidth;
-    FAddImageWidth := TImagesWidth(Source).AddImageWidth;
-    FCloseImageWidth := TImagesWidth(Source).CloseImageWidth;
-    FTabImagesWidth := TImagesWidth(Source).TabImagesWidth;
+    FPrevWidth := TImagesWidth(Source).PrevWidth;
+    FNextWidth := TImagesWidth(Source).NextWidth;
+    FAddWidth := TImagesWidth(Source).AddWidth;
+    FCloseWidth := TImagesWidth(Source).CloseWidth;
+    FTabWidth := TImagesWidth(Source).TabsWidth;
     if Assigned(FOnChange) then FOnChange(Self);
   end
   else
@@ -578,11 +578,11 @@ var
 begin
   Ptr := nil;
   case Index of
-    0: Ptr := @FPrevImageWidth;
-    1: Ptr := @FNextImageWidth;
-    2: Ptr := @FAddImageWidth;
-    3: Ptr := @FCloseImageWidth;
-    4: Ptr := @FTabImagesWidth;
+    0: Ptr := @FPrevWidth;
+    1: Ptr := @FNextWidth;
+    2: Ptr := @FAddWidth;
+    3: Ptr := @FCloseWidth;
+    4: Ptr := @FTabWidth;
   end;
   if Ptr = nil then Exit;
   if Ptr^ <> Value then
@@ -1203,23 +1203,23 @@ begin
     PPI   := Font.PixelsPerInch;
     Scale := 1;//GetCanvasScaleFactor;
 
-    if FButtonImages.PrevImageIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.PrevImageWidth, PPI, Scale].GetBitmap(FButtonImages.PrevImageIndex, FScrollImages[0])
+    if FButtonImages.PrevIndex >= 0 then
+      FImages.ResolutionForPPI[FImagesWidth.PrevWidth, PPI, Scale].GetBitmap(FButtonImages.PrevIndex, FScrollImages[0])
     else
       LoadBitmapFromLRS('tab_prev', FScrollImages[0]);
 
-    if FButtonImages.NextImageIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.NextImageWidth, PPI, Scale].GetBitmap(FButtonImages.NextImageIndex, FScrollImages[1])
+    if FButtonImages.NextIndex >= 0 then
+      FImages.ResolutionForPPI[FImagesWidth.NextWidth, PPI, Scale].GetBitmap(FButtonImages.NextIndex, FScrollImages[1])
     else
       LoadBitmapFromLRS('tab_next', FScrollImages[1]);
 
-    if FButtonImages.AddImageIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.AddImageWidth, PPI, Scale].GetBitmap(FButtonImages.AddImageIndex, FAddImage)
+    if FButtonImages.AddIndex >= 0 then
+      FImages.ResolutionForPPI[FImagesWidth.AddWidth, PPI, Scale].GetBitmap(FButtonImages.AddIndex, FAddImage)
     else
       LoadBitmapFromLRS('tab_new', FAddImage);
 
-    if FButtonImages.CloseImageIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.CloseImageWidth, PPI, Scale].GetBitmap(FButtonImages.CloseImageIndex, FCloseImage)
+    if FButtonImages.CloseIndex >= 0 then
+      FImages.ResolutionForPPI[FImagesWidth.CloseWidth, PPI, Scale].GetBitmap(FButtonImages.CloseIndex, FCloseImage)
     else
       LoadBitmapFromLRS('cross', FCloseImage);
   end
@@ -1836,7 +1836,7 @@ function TExtTabCtrl.GetTabImageWidth(Tab: TExtTab): Integer;
 begin
   if Assigned(FImages) and (Tab.ImageIndex >= 0) then
     // Use the DPI-aware width
-    Result := FImages.WidthForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch]
+    Result := FImages.WidthForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch]
   else if Assigned(Tab.FImage) and not Tab.FImage.Empty then
     Result := Tab.FImage.Width
   else
@@ -1847,7 +1847,7 @@ function TExtTabCtrl.GetTabImageHeight(Tab: TExtTab): Integer;
 begin
   if Assigned(FImages) and (Tab.ImageIndex >= 0) then
     // Use the DPI-aware height
-    Result := FImages.HeightForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch]
+    Result := FImages.HeightForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch]
   else if Assigned(Tab.FImage) and not Tab.FImage.Empty then
     Result := Tab.FImage.Height
   else
@@ -1954,8 +1954,8 @@ procedure TExtTabCtrl.GetBaseTabBitmap(Tab: TExtTab; Dest: TBitmap);
 begin
   if Assigned(FImages) and (Tab.ImageIndex >= 0) then
     // Get the best matching resolution for the current DPI
-    //FImages.ResolutionForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch, GetCanvasScaleFactor].GetBitmap(Tab.ImageIndex, Dest)
-    FImages.ResolutionForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch, 1].GetBitmap(Tab.ImageIndex, Dest)
+    //FImages.ResolutionForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch, GetCanvasScaleFactor].GetBitmap(Tab.ImageIndex, Dest)
+    FImages.ResolutionForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch, 1].GetBitmap(Tab.ImageIndex, Dest)
   else if Assigned(Tab.FImage) and not Tab.FImage.Empty then
     Dest.Assign(Tab.FImage)
   else
@@ -2564,8 +2564,8 @@ begin
     // Check for ImageList + ImageIndex
     if Assigned(FImages) and (FTabs[i].ImageIndex >= 0) then
     begin
-      ImgW := FImages.WidthForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch];
-      ImgH := FImages.HeightForPPI[FImagesWidth.TabImagesWidth, Font.PixelsPerInch];
+      ImgW := FImages.WidthForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
+      ImgH := FImages.HeightForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
       ImgExtent := ImgW + GetScale(cImageSpacing);
     end
     // Fallback to the standalone TBitmap property
