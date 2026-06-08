@@ -237,7 +237,7 @@ type
     function GetScale(Value: Integer): Integer;
     procedure DrawTabTextAndImage(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; IsActive: Boolean);
     procedure DrawCloseButton(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; IsActive: Boolean);
-    procedure DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab);
+    procedure DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
     procedure DrawStripLine(ACanvas: TCanvas; const View: TRect);
     function  ResolveColor(AColor: TColor): TColor;
 
@@ -1935,9 +1935,9 @@ begin
   end;
 end;
 
-procedure TExtTabCtrl.DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab);
+procedure TExtTabCtrl.DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
 var
-  IndicatorRect, TextBounds: TRect;
+  IndicatorRect: TRect;
   Thick: Integer;
 begin
   if (Tab.StripeColor = clNone) then Exit;
@@ -1945,15 +1945,18 @@ begin
   ACanvas.Brush.Color := Tab.StripeColor;
   ACanvas.Pen.Style := psClear;
   Thick := GetScale(3);
-  TextBounds := GetTabTextBounds(ACanvas, R, Tab);
-  IndicatorRect := R;
+
+  // Safety catch for extremely narrow tabs
+  if (R.Width <= Indent*2) or (R.Height <= Indent*2) then
+    Indent := 0;
 
   case FTabPosition of
-    tpTop: IndicatorRect := Rect(TextBounds.Left, R.Top + 1, TextBounds.Right, R.Top + 1 + Thick);
-    tpBottom: IndicatorRect := Rect(TextBounds.Left, R.Bottom - 1 - Thick, TextBounds.Right, R.Bottom - 1);
-    tpLeft: IndicatorRect := Rect(R.Left + 1, TextBounds.Top, R.Left + 1 + Thick, TextBounds.Bottom);
-    tpRight: IndicatorRect := Rect(R.Right - 1 - Thick, TextBounds.Top, R.Right - 1, TextBounds.Bottom);
+    tpTop: IndicatorRect := Rect(R.Left + Indent, R.Top + 1, R.Right - Indent, R.Top + 1 + Thick);
+    tpBottom: IndicatorRect := Rect(R.Left + Indent, R.Bottom - 1 - Thick, R.Right - Indent, R.Bottom - 1);
+    tpLeft: IndicatorRect := Rect(R.Left + 1, R.Top + Indent, R.Left + 1 + Thick, R.Bottom - Indent);
+    tpRight: IndicatorRect := Rect(R.Right - 1 - Thick, R.Top + Indent, R.Right - 1, R.Bottom - Indent);
   end;
+
   ACanvas.FillRect(IndicatorRect);
   ACanvas.Pen.Style := psSolid;
 end;
@@ -1991,7 +1994,7 @@ begin
   // Draw Color Stripe
   if (Tab.StripeColor <> clNone) then
   begin
-    DrawColorStripe(ACanvas, R, Tab);
+    DrawColorStripe(ACanvas, R, Tab, 2);
 
     ACanvas.Brush.Style := bsClear;
     ACanvas.Pen.Style := psSolid;
@@ -2071,7 +2074,7 @@ begin
   // Draw Color Stripe
   if (Tab.StripeColor <> clNone) then
   begin
-    DrawColorStripe(ACanvas, R, Tab);
+    DrawColorStripe(ACanvas, R, Tab, 2);
 
     ACanvas.Brush.Style := bsClear;
     ACanvas.Pen.Style := psSolid;
@@ -2180,7 +2183,7 @@ begin
   // Draw Color Stripe following the narrower edge
   if (Tab.StripeColor <> clNone) then
   begin
-    DrawColorStripe(ACanvas, R, Tab);
+    DrawColorStripe(ACanvas, R, Tab, 4);
 
     ACanvas.Brush.Style := bsClear;
     ACanvas.Pen.Style := psSolid;
@@ -2194,7 +2197,7 @@ end;
 procedure TExtTabCtrl.DrawChromeTab(ACanvas: TCanvas; R: TRect; IsActive: Boolean; Tab: TExtTab);
 var
   Radius: Integer;
-  TextBounds: TRect;
+  StripeBounds: TRect;
   BaseClr: TColor;
 begin
   Radius := GetScale(8);
@@ -2273,25 +2276,29 @@ begin
     end;
 
     // Second, Draw the Accent Line (Top blue bar style)
-    ACanvas.Pen.Color := clHighlight;
-    ACanvas.Pen.Width := GetScale(3);
+    if (Tab.StripeColor = clNone) then
+    begin
+      ACanvas.Pen.Color := clHighlight;
+      ACanvas.Pen.Width := GetScale(3);
 
-    // Get text bounds for precise alignment
-    TextBounds := GetTabTextBounds(ACanvas, R, Tab);
+      // Get bounds for precise alignment
+      StripeBounds := R;
+      InflateRect(StripeBounds, -GetScale(5), -GetScale(5));
 
-    case FTabPosition of
-      tpTop: ACanvas.Line(TextBounds.Left, R.Top + 1, TextBounds.Right, R.Top + 1);
-      tpBottom: ACanvas.Line(TextBounds.Left, R.Bottom - 2, TextBounds.Right, R.Bottom - 2);
-      tpLeft: ACanvas.Line(R.Left + 1, TextBounds.Top, R.Left + 1, TextBounds.Bottom);
-      tpRight: ACanvas.Line(R.Right - 2, TextBounds.Top, R.Right - 2, TextBounds.Bottom);
+      case FTabPosition of
+        tpTop: ACanvas.Line(StripeBounds.Left, R.Top + 1, StripeBounds.Right, R.Top + 1);
+        tpBottom: ACanvas.Line(StripeBounds.Left, R.Bottom - 2, StripeBounds.Right, R.Bottom - 2);
+        tpLeft: ACanvas.Line(R.Left + 1, StripeBounds.Top, R.Left + 1, StripeBounds.Bottom);
+        tpRight: ACanvas.Line(R.Right - 2, StripeBounds.Top, R.Right - 2, StripeBounds.Bottom);
+      end;
+      ACanvas.Pen.Width := 1;
     end;
-    ACanvas.Pen.Width := 1;
   end;
 
   // Draw Color Stripe (Accent)
   if (Tab.StripeColor <> clNone) then
   begin
-    DrawColorStripe(ACanvas, R, Tab);
+    DrawColorStripe(ACanvas, R, Tab, 5);
 
     ACanvas.Brush.Style := bsClear;
     ACanvas.Pen.Style := psSolid;
@@ -2353,7 +2360,7 @@ begin
   // Draw Color Stripe (Accent)
   if (Tab.StripeColor <> clNone) then
   begin
-    DrawColorStripe(ACanvas, R, Tab);
+    DrawColorStripe(ACanvas, R, Tab, 6);
 
     ACanvas.Brush.Style := bsClear;
     ACanvas.Pen.Style := psSolid;
