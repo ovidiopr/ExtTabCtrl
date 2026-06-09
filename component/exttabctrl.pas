@@ -134,7 +134,7 @@ type
     procedure SetVisible(AValue: Boolean);
     procedure SetImage(AValue: TBitmap);
     procedure SetImageIndex(AValue: TImageIndex);
-    function  GetImage: TBitmap;
+    function GetImage: TBitmap;
     procedure SetShowCloseButton(AValue: Boolean);
     procedure Redraw(Sender: TObject);
   protected
@@ -263,7 +263,7 @@ type
     procedure DrawCloseButton(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; IsActive: Boolean);
     procedure DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
     procedure DrawStripLine(ACanvas: TCanvas; const View: TRect);
-    function  ResolveColor(AColor: TColor): TColor;
+    function ResolveColor(AColor: TColor): TColor;
 
     procedure DrawTabImage(ACanvas: TCanvas; Tab: TExtTab; X, Y: Integer);
     procedure DrawRotatedText(ACanvas: TCanvas; const S: String; const R: TRect; Degrees: Integer);
@@ -379,8 +379,8 @@ type
   // tree, so the selected tab is visible at design time
   TTabIndexPropertyEditor = class(TIntegerPropertyEditor)
   public
-    function  GetAttributes: TPropertyAttributes; override;
-    function  GetValue: String; override;
+    function GetAttributes: TPropertyAttributes; override;
+    function GetValue: String; override;
     procedure GetValues(Proc: TGetStrProc); override;
     procedure SetValue(const NewValue: String); override;
   end;
@@ -3646,7 +3646,7 @@ begin
   RegisterPropertyEditor(TypeInfo(Integer), TExtTabCtrl, 'TabIndex', TTabIndexPropertyEditor);
 
   // Register visual dropdowns for the ImageIndex properties on Tabs and Buttons
-  RegisterPropertyEditor(TypeInfo(TImageIndex), TExtTab, '', TExtTabCtrlImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TImageIndex), TExtTab, 'ImageIndex', TExtTabCtrlImageIndexProperty);
   RegisterPropertyEditor(TypeInfo(TImageIndex), TButtonImages, '', TExtTabCtrlImageIndexProperty);
 end;
 
