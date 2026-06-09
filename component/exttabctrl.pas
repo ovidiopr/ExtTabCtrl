@@ -78,10 +78,10 @@ type
   public
     constructor Create;
     procedure Assign(Source: TPersistent); override;
+    property OnRedraw: TNotifyEvent read FOnRedraw write FOnRedraw;
   published
     property FontSize: Integer read FFontSize write SetFontSize default 0;
     property FontStyles: TFontStyles read FFontStyles write SetFontStyles default [];
-    property OnRedraw: TNotifyEvent read FOnRedraw write FOnRedraw;
   end;
 
   TImagesWidth = class(TPersistent)
@@ -99,11 +99,11 @@ type
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
-    property PrevWidth: Integer index 0 read FPrevWidth write SetWidth default 16;
-    property NextWidth: Integer index 1 read FNextWidth write SetWidth default 16;
-    property AddWidth: Integer index 2 read FAddWidth write SetWidth default 16;
-    property CloseWidth: Integer index 3 read FCloseWidth write SetWidth default 16;
-    property TabsWidth: Integer index 4 read FTabWidth write SetWidth default 24;
+    property PrevWidth: Integer index 0 read FPrevWidth write SetWidth default 0;
+    property NextWidth: Integer index 1 read FNextWidth write SetWidth default 0;
+    property AddWidth: Integer index 2 read FAddWidth write SetWidth default 0;
+    property CloseWidth: Integer index 3 read FCloseWidth write SetWidth default 0;
+    property TabsWidth: Integer index 4 read FTabWidth write SetWidth default 0;
   end;
 
   TExtTabCtrl = class;
@@ -131,6 +131,7 @@ type
     procedure SetStripeColor(AValue: TColor);
     procedure SetVisible(AValue: Boolean);
     procedure SetImage(AValue: TBitmap);
+    procedure SetImageIndex(AValue: Integer);
     function  GetImage: TBitmap;
     procedure SetShowCloseButton(AValue: Boolean);
     procedure Redraw(Sender: TObject);
@@ -150,7 +151,7 @@ type
     property Data: TObject read FData write FData;
     property FontOptions: TExtFontOptions read FFontOptions;
     property Image: TBitmap read GetImage write SetImage;
-    property ImageIndex: Integer read FImageIndex write FImageIndex default -1;
+    property ImageIndex: Integer read FImageIndex write SetImageIndex default -1;
     property Hint: String read FHint write FHint;
     property ShowCloseButton: Boolean read FShowCloseButton write SetShowCloseButton default True;
   end;
@@ -302,6 +303,7 @@ type
     procedure DoExit; override;
 
     procedure WMLMGetDlgCode(var Message: TLMessage); message LM_GETDLGCODE;
+    procedure WMLButtonDown(var Message: TLMMouse); message LM_LBUTTONDOWN;
 
     procedure CreateWnd; override;
     procedure Loaded; override;
@@ -550,11 +552,11 @@ end;
 { TImagesWidth }
 constructor TImagesWidth.Create;
 begin
-  FPrevWidth := 16;
-  FNextWidth := 16;
-  FAddWidth := 16;
-  FCloseWidth := 16;
-  FTabWidth := 24;
+  FPrevWidth := 0;
+  FNextWidth := 0;
+  FAddWidth := 0;
+  FCloseWidth := 0;
+  FTabWidth := 0;
 end;
 
 procedure TImagesWidth.Assign(Source: TPersistent);
@@ -682,6 +684,16 @@ begin
   FreeAndNil(FCachedTabImage);
   FImage := AValue;
   FTextWidth := -1;
+  Redraw(Self);
+end;
+
+procedure TExtTab.SetImageIndex(AValue: Integer);
+begin
+  if FImageIndex = AValue then Exit;
+  FImageIndex := AValue;
+  FreeAndNil(FCachedTabImage);
+  FTextWidth := -1;
+  FTextHeight := -1;
   Redraw(Self);
 end;
 
@@ -1672,13 +1684,13 @@ begin
   if IsHorizontal then
   begin
     Avail := ClientWidth;
-    if (csDesigning in ComponentState) or FBtnAdd.Visible then
+    if FBtnAdd.Visible or (csDesigning in ComponentState) then
       Avail := Avail - FBtnAdd.Width;
   end
   else
   begin
     Avail := ClientHeight;
-    if (csDesigning in ComponentState) or FBtnAdd.Visible then
+    if FBtnAdd.Visible or (csDesigning in ComponentState) then
       Avail := Avail - FBtnAdd.Height;
   end;
 
@@ -2578,8 +2590,8 @@ begin
 
     // Expand the tab strip if this image is taller (horizontal) or wider
     // (vertical) than the current strip thickness
-    MinStrip := IfThen(IsHorizontal, ImgH, ImgW);
-    if (MinStrip > 0) and (GetScale(FTabSize) < MinStrip) then
+    MinStrip := IfThen(IsHorizontal, ImgH, ImgW) + GetScale(cContentIndent)*2;
+    if (MinStrip > GetScale(cContentIndent)*2) and (GetScale(FTabSize) < MinStrip) then
     begin
       FTabSize := MinStrip div GetScale(1);
       InvalidatePreferredSize;
@@ -2757,44 +2769,6 @@ var
   Idx: Integer;
   V, R, CR: TRect;
 begin
-  if (csDesigning in ComponentState) and (Button in [mbLeft, mbRight]) then
-  begin
-    // Force the Object Inspector to instantly select this component
-    if Assigned(GlobalDesignHook) then
-      GlobalDesignHook.SelectOnlyThis(Self);
-
-    if Button = mbLeft then
-    begin
-      // Child TSpeedButtons don't receive clicks at design time because the
-      // designer intercepts them
-      if FBtnScrollPrev.Visible and
-         PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
-      begin
-        ScrollPrev(nil);
-        Exit;
-      end;
-      if FBtnScrollNext.Visible and
-         PtInRect(FBtnScrollNext.BoundsRect, Point(X, Y)) then
-      begin
-        ScrollNext(nil);
-        Exit;
-      end;
-    end;
-
-    // Switch tabs if a specific tab item was clicked
-    Idx := TabAtPos(X, Y);
-    if Idx <> -1 then
-    begin
-      SetDesignTabIndex(Idx);
-
-      // Load the selected tab into the property editor on click
-      if (Button = mbLeft) and Assigned(GlobalDesignHook) then
-        GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
-    end;
-
-    Exit; // Bypass runtime mouse tracking actions
-  end;
-
   inherited MouseDown(Button, Shift, X, Y);
 
   Idx := TabAtPos(X, Y);
@@ -2849,17 +2823,6 @@ var
   OldHint: String;
   Msg: TLMMouse;
 begin
-  if csDesigning in ComponentState then
-  begin
-    if FHoverTab <> -1 then
-    begin
-      FHoverTab := -1;
-      Invalidate;
-    end;
-    inherited MouseMove(Shift, X, Y);
-    Exit;
-  end;
-
   inherited MouseMove(Shift, X, Y);
 
   NT := TabAtPos(X, Y);
@@ -3095,6 +3058,50 @@ begin
     Message.Result := DLGC_WANTARROWS
   else
     Message.Result := 0;
+end;
+
+// Without csDesignInteractive the LCL designer handles dragging/selection
+// of the component normally.  However it also swallows mouse events before
+// they reach MouseDown, so tab clicks at design time are never processed.
+// I have tried to intercept LM_LBUTTONDOWN here, to implement design-time
+// tab switching and scroll-button support while leaving component dragging
+// intact, but this is not working. Will leave the code here, to see if I
+// can figure out a way of make it work.
+procedure TExtTabCtrl.WMLButtonDown(var Message: TLMMouse);
+var
+  X, Y, Idx: Integer;
+begin
+  if not (csDesigning in ComponentState) then
+  begin
+    inherited;
+    Exit;
+  end;
+
+  X := Message.XPos;
+  Y := Message.YPos;
+
+  // Scroll buttons: child TSpeedButtons don't fire at design time
+  if FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
+  begin
+    ScrollPrev(nil);
+    Exit;
+  end;
+  if FBtnScrollNext.Visible and PtInRect(FBtnScrollNext.BoundsRect, Point(X, Y)) then
+  begin
+    ScrollNext(nil);
+    Exit;
+  end;
+
+  // Tab click: select the tab and update the Object Inspector
+  Idx := TabAtPos(X, Y);
+  if Idx <> -1 then
+  begin
+    if Assigned(GlobalDesignHook) then
+      GlobalDesignHook.SelectOnlyThis(Self);
+    SetDesignTabIndex(Idx);
+    if Assigned(GlobalDesignHook) then
+      GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
+  end;
 end;
 
 procedure TExtTabCtrl.DblClick;
@@ -3421,7 +3428,7 @@ constructor TExtTabCtrl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  ControlStyle := ControlStyle + [csClickEvents, csDoubleClicks, csOpaque, csDesignInteractive];
+  ControlStyle := ControlStyle + [csClickEvents, csDoubleClicks, csOpaque];
   TabStop := True;
 
   // Provide a proper initial size when dropped onto a form by a  single click
@@ -3510,6 +3517,7 @@ begin
 
   FreeAndNil(FButtonImages);
   FreeAndNil(FButtonHints);
+  FreeAndNil(FImagesWidth);
 
   FreeAndNil(FAddImage);
   FreeAndNil(FCloseImage);
@@ -3564,6 +3572,7 @@ begin
       if (TargetIndex >= 0) and (TargetIndex < TabControl.Tabs.Count) then
       begin
         CurrentTab := TabControl.Tabs[TargetIndex];
+        // DeletePersistent removes the node; DeleteTab is not needed
         if Assigned(GlobalDesignHook) then
           GlobalDesignHook.DeletePersistent(TPersistent(CurrentTab));
         //TabControl.DeleteTab(TargetIndex);
