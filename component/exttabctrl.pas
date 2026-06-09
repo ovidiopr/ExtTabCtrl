@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, Controls, Graphics, Buttons, LCLType, Types, Math,
   LResources, LCLIntf, GraphUtil, ImgList, LMessages, Forms, Menus,
-  ComponentEditors, PropEdits, IntfGraphics;
+  ComponentEditors, PropEdits, IntfGraphics, GraphPropEdits;
 
 type
   TTabPosition = (tpTop, tpBottom, tpLeft, tpRight);
@@ -32,8 +32,12 @@ type
   TTabImportEvent = procedure(Sender: TObject; Tab: TExtTab; AObject: TObject) of object;
   TButtonClickEvent = procedure(Sender: TObject) of object;
 
+  TExtTabCtrl = class;
+
   TButtonImages = class(TPersistent)
   private
+    FOwnerCtrl: TExtTabCtrl;
+
     FPrevIndex: TImageIndex;
     FNextIndex: TImageIndex;
     FAddIndex: TImageIndex;
@@ -42,7 +46,7 @@ type
     FOnChange: TNotifyEvent;
     procedure SetIndex(Index: Integer; Value: TImageIndex);
   public
-    constructor Create;
+    constructor Create(AOwner: TExtTabCtrl);
     procedure Assign(Source: TPersistent); override;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
@@ -105,8 +109,6 @@ type
     property CloseWidth: Integer index 3 read FCloseWidth write SetWidth default 0;
     property TabsWidth: Integer index 4 read FTabWidth write SetWidth default 0;
   end;
-
-  TExtTabCtrl = class;
 
   TExtTab = class(TCollectionItem)
   private
@@ -383,6 +385,11 @@ type
     procedure SetValue(const NewValue: String); override;
   end;
 
+  TExtTabCtrlImageIndexProperty = class(TImageIndexPropertyEditor)
+  protected
+    function GetImageList: TCustomImageList; override;
+  end;
+
 procedure Register;
 
 implementation
@@ -453,8 +460,10 @@ begin
 end;
 
 { TButtonImages }
-constructor TButtonImages.Create;
+constructor TButtonImages.Create(AOwner: TExtTabCtrl);
 begin
+  FOwnerCtrl := AOwner;
+
   FPrevIndex := -1;
   FNextIndex := -1;
   FAddIndex := -1;
@@ -3456,7 +3465,7 @@ begin
   LoadBitmapFromLRS('tab_prev', FScrollImages[0]);
   LoadBitmapFromLRS('tab_next', FScrollImages[1]);
 
-  FButtonImages := TButtonImages.Create;
+  FButtonImages := TButtonImages.Create(Self);
   FButtonImages.OnChange := @ButtonImagesChanged;
   FButtonHints := TButtonHints.Create;
   FImagesWidth := TImagesWidth.Create;
@@ -3631,9 +3640,14 @@ procedure Register;
 begin
   RegisterComponents('Common Controls', [TExtTabCtrl]);
   RegisterComponentEditor(TExtTabCtrl, TExtTabCtrlEditor);
+
   // Register the custom property editor so that changing TabIndex in the
   // Object Inspector immediately updates the visible tab at design time
   RegisterPropertyEditor(TypeInfo(Integer), TExtTabCtrl, 'TabIndex', TTabIndexPropertyEditor);
+
+  // Register visual dropdowns for the ImageIndex properties on Tabs and Buttons
+  RegisterPropertyEditor(TypeInfo(TImageIndex), TExtTab, '', TExtTabCtrlImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TImageIndex), TButtonImages, '', TExtTabCtrlImageIndexProperty);
 end;
 
 { TTabIndexPropertyEditor }
@@ -3678,6 +3692,26 @@ begin
     S := Copy(S, 1, Pos(' ', S) - 1);
   Idx := StrToIntDef(S, -1);
   Ctrl.SetDesignTabIndex(Idx);
+end;
+
+{ TExtTabCtrlImageIndexProperty }
+function TExtTabCtrlImageIndexProperty.GetImageList: TCustomImageList;
+var
+  P: TPersistent;
+  TC: TExtTabCtrl;
+begin
+  Result := nil;
+  P := GetComponent(0);
+
+  if P is TExtTab then
+    TC := TExtTab(P).FOwnerCtrl
+  else if P is TButtonImages then
+    TC := TButtonImages(P).FOwnerCtrl
+  else
+    Exit;
+
+  if Assigned(TC) then
+    Result := TC.Images;
 end;
 
 initialization
