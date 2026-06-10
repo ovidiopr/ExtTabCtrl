@@ -222,6 +222,8 @@ type
     FOnTabDblClick: TTabClickEvent;
     FOnImportTab: TTabImportEvent;
     FOnAddButtonClick: TButtonClickEvent;
+    FOnGetFocus: TNotifyEvent;
+    FOnLostFocus: TNotifyEvent;
 
     FScrollOffset: Integer;
     FHoverTab, FHoverCloseTab: Integer;
@@ -397,6 +399,8 @@ type
     property OnTabDblClick: TTabClickEvent read FOnTabDblClick write FOnTabDblClick;
     property OnImportTab: TTabImportEvent read FOnImportTab write FOnImportTab;
     property OnAddButtonClick: TButtonClickEvent read FOnAddButtonClick write FOnAddButtonClick;
+    property OnGetFocus: TNotifyEvent read FOnGetFocus write FOnGetFocus;
+    property OnLostFocus: TNotifyEvent read FOnLostFocus write FOnLostFocus;
   end;
 
   TExtTabCtrlEditor = class(TComponentEditor)
@@ -2521,10 +2525,12 @@ begin
   // Background and hover
   if IsActive then
   begin
+    BaseClr := ResolveColor(Color);
+
     if Tab.Index = FHoverTab then
-      ACanvas.Brush.Color := BlendColors(ResolveColor(Color), clHighlight, 0.2)
+      ACanvas.Brush.Color := BlendColors(BaseClr, clHighlight, 0.2)
     else
-      ACanvas.Brush.Color := Color;
+      ACanvas.Brush.Color := BaseClr;
     ACanvas.Brush.Style := bsSolid;
   end
   else
@@ -2536,8 +2542,18 @@ begin
 
     if Tab.Index = FHoverTab then
     begin
-      // Light subtle hover
-      ACanvas.Brush.Color := BlendColors(BaseClr, clHighlight, 0.08);
+      // On hover, slide from Tab.Color toward the component background
+      // blended with a touch of Highlight
+      if Tab.Color <> clNone then
+        ACanvas.Brush.Color := BlendColors(BlendColors(ResolveColor(Color), clHighlight, 0.12), BaseClr, 0.25)
+      else
+        ACanvas.Brush.Color := BlendColors(BaseClr, clHighlight, 0.08);
+      ACanvas.Brush.Style := bsSolid;
+    end
+    else if Tab.Color <> clNone then
+    begin
+      // At rest: draw with the tab's own colour
+      ACanvas.Brush.Color := BaseClr;
       ACanvas.Brush.Style := bsSolid;
     end
     else
@@ -2545,7 +2561,8 @@ begin
   end;
 
   // Draw Tab (RoundRect with overlap to square the bottom)
-  if IsActive or (Tab.Index = FHoverTab) then
+  if IsActive or (Tab.Index = FHoverTab) or
+     (not IsActive and (Tab.Color <> clNone)) then
   begin
     ACanvas.Pen.Color := clBtnShadow;
     case FTabPosition of
@@ -2569,8 +2586,9 @@ begin
     tpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
   end;
 
-  // Separators (For inactive non-hovered tabs)
-  if not IsActive and (Tab.Index <> FHoverTab) and (Tab.Index <> FTabIndex - 1) then
+  // Separators (For inactive non-hovered tabs without their own colour border)
+  if not IsActive and (Tab.Index <> FHoverTab) and
+     (Tab.Index <> FTabIndex - 1) and (Tab.Color = clNone) then
   begin
     ACanvas.Pen.Color := clBtnShadow;
     if IsHorizontal then
@@ -2582,8 +2600,8 @@ begin
   // Active Tab: Accent Line and "Open" Connection
   if IsActive then
   begin
-    // First, "Open" the tab (erase the segment of the base line)
-    ACanvas.Pen.Color := Color;
+    // Erase the strip-line segment under the active tab using the active fill
+    ACanvas.Pen.Color := BaseClr;
     case FTabPosition of
       tpTop: ACanvas.Line(R.Left + 1, R.Bottom - 1, R.Right - 1, R.Bottom - 1);
       tpBottom: ACanvas.Line(R.Left + 1, R.Top, R.Right - 1, R.Top);
@@ -2591,13 +2609,13 @@ begin
       tpRight: ACanvas.Line(R.Left, R.Top + 1, R.Left, R.Bottom - 1);
     end;
 
-    // Second, Draw the Accent Line (Top blue bar style)
+    // Accent line: use Tab.Color when set, otherwise fall back to clHighlight
     if (Tab.StripeColor = clNone) then
     begin
-      ACanvas.Pen.Color := clHighlight;
+      ACanvas.Pen.Color := IfThen(Tab.Color <> clNone,
+        ResolveColor(Tab.Color), clHighlight);
       ACanvas.Pen.Width := GetScale(3);
 
-      // Get bounds for precise alignment
       StripeBounds := R;
       InflateRect(StripeBounds, -GetScale(5), -GetScale(5));
 
@@ -2639,12 +2657,18 @@ begin
 
   if IsActive then
   begin
-    // Active tab always uses the component background colour as the pill base
-    if Tab.Index = FHoverTab then
-      ACanvas.Brush.Color := BlendColors(BlendColors(ResolveColor(Color), clWindow, 0.85), clHighlight, 0.2)
+    // Active pill: blend component Color with clWindow for the floating look
+    // When Tab.Color is set, tint the base subtly so the color is visible
+    // without losing the characteristic macOS translucent-pill appearance
+    if Tab.Color <> clNone then
+      BaseClr := BlendColors(ResolveColor(Color), ResolveColor(Tab.Color), 0.25)
     else
-      ACanvas.Brush.Color := BlendColors(ResolveColor(Color), clWindow, 0.85);
-    ACanvas.Pen.Color := BlendColors(ResolveColor(Color), clBtnShadow, 0.15);
+      BaseClr := ResolveColor(Color);
+    if Tab.Index = FHoverTab then
+      ACanvas.Brush.Color := BlendColors(BlendColors(BaseClr, clWindow, 0.85), clHighlight, 0.2)
+    else
+      ACanvas.Brush.Color := BlendColors(BaseClr, clWindow, 0.85);
+    ACanvas.Pen.Color := BlendColors(BaseClr, clBtnShadow, 0.15);
     ACanvas.RoundRect(DrawR.Left, DrawR.Top, DrawR.Right, DrawR.Bottom, Radius, Radius);
   end
   else
@@ -2656,8 +2680,17 @@ begin
 
     if Tab.Index = FHoverTab then
     begin
-      // Light hover: 90% blend toward the system window color
+      // Hover: blend Tab.Color toward window background
       ACanvas.Brush.Color := BlendColors(BaseClr, clWindow, 0.9);
+      ACanvas.Pen.Style := psClear;
+      ACanvas.RoundRect(DrawR.Left, DrawR.Top, DrawR.Right, DrawR.Bottom, Radius, Radius);
+      ACanvas.Pen.Style := psSolid;
+    end
+    else if Tab.Color <> clNone then
+    begin
+      // Non-hover inactive with Tab.Color: draw a subtle tinted pill so the
+      // color is visible at rest (more muted than on hover)
+      ACanvas.Brush.Color := BlendColors(BaseClr, clWindow, 0.82);
       ACanvas.Pen.Style := psClear;
       ACanvas.RoundRect(DrawR.Left, DrawR.Top, DrawR.Right, DrawR.Bottom, Radius, Radius);
       ACanvas.Pen.Style := psSolid;
@@ -2667,7 +2700,7 @@ begin
     if (Tab.Index < FTabs.Count - 1) and (Tab.Index <> FTabIndex) and
       (Tab.Index <> FTabIndex - 1) then
     begin
-      ACanvas.Pen.Color := BlendColors(ResolveColor(Color), clBlack, 0.05); // Barely visible line
+      ACanvas.Pen.Color := BlendColors(ResolveColor(Color), clBlack, 0.05);
       ACanvas.MoveTo(R.Right - 1, R.Top + GetScale(7));
       ACanvas.LineTo(R.Right - 1, R.Bottom - GetScale(7));
     end;
@@ -3312,12 +3345,14 @@ procedure TExtTabCtrl.DoEnter;
 begin
   inherited DoEnter;
   Invalidate; // repaint to show focus indicator
+  if Assigned(FOnGetFocus) then FOnGetFocus(Self);
 end;
 
 procedure TExtTabCtrl.DoExit;
 begin
   inherited DoExit;
   Invalidate; // repaint to hide focus indicator
+  if Assigned(FOnLostFocus) then FOnLostFocus(Self);
 end;
 
 procedure TExtTabCtrl.WMLMGetDlgCode(var Message: TLMessage);
