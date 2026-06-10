@@ -310,7 +310,7 @@ type
     procedure DoExit; override;
 
     procedure WMLMGetDlgCode(var Message: TLMessage); message LM_GETDLGCODE;
-    procedure WMLButtonDown(var Message: TLMMouse); message LM_LBUTTONDOWN;
+    procedure CMDesignHitTest(var Message: TLMessage); message CM_DESIGNHITTEST;
 
     procedure CreateWnd; override;
     procedure Loaded; override;
@@ -2800,6 +2800,35 @@ var
   Idx: Integer;
   V, R, CR: TRect;
 begin
+  if csDesigning in ComponentState then
+  begin
+    if Button = mbLeft then
+    begin
+      if FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
+      begin
+        ScrollPrev(nil);
+        Exit;
+      end;
+      if FBtnScrollNext.Visible and PtInRect(FBtnScrollNext.BoundsRect, Point(X, Y)) then
+      begin
+        ScrollNext(nil);
+        Exit;
+      end;
+
+      Idx := TabAtPos(X, Y);
+      if Idx <> -1 then
+      begin
+        SetDesignTabIndex(Idx);
+        {$IFDEF LCLDesign}
+        if Assigned(GlobalDesignHook) then
+          GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
+        {$ENDIF}
+      end;
+    end;
+
+    Exit; // Bypass runtime mouse tracking actions
+  end;
+
   inherited MouseDown(Button, Shift, X, Y);
 
   Idx := TabAtPos(X, Y);
@@ -2854,6 +2883,16 @@ var
   OldHint: String;
   Msg: TLMMouse;
 begin
+  if csDesigning in ComponentState then
+  begin
+    if FHoverTab <> -1 then
+    begin
+      FHoverTab := -1;
+      Invalidate;
+    end;
+    Exit;
+  end;
+
   inherited MouseMove(Shift, X, Y);
 
   NT := TabAtPos(X, Y);
@@ -3093,52 +3132,25 @@ begin
     Message.Result := 0;
 end;
 
-// Without csDesignInteractive the LCL designer handles dragging/selection
-// of the component normally.  However it also swallows mouse events before
-// they reach MouseDown, so tab clicks at design time are never processed.
-// I have tried to intercept LM_LBUTTONDOWN here, to implement design-time
-// tab switching and scroll-button support while leaving component dragging
-// intact, but this is not working. Will leave the code here, to see if I
-// can figure out a way of make it work.
-procedure TExtTabCtrl.WMLButtonDown(var Message: TLMMouse);
+procedure TExtTabCtrl.CMDesignHitTest(var Message: TLMessage);
 var
-  X, Y, Idx: Integer;
+  PCoords: TSmallPoint;
+  Pt: TPoint;
 begin
-  if not (csDesigning in ComponentState) then
+  // Extract coordinates from LParam as a TSmallPoint (Lazarus documentation)
+  // https://wiki.freepascal.org/Extending_the_IDE#Disabling_the_designer_mouse_handler
+  PCoords := TSmallPoint(LongInt(Message.LParam));
+  Pt := Point(PCoords.x, PCoords.y);
+
+  // Return Message.Result := 1 if clicking on a visible scroll button or a valid tab
+  if (FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Pt)) or
+     (FBtnScrollNext.Visible and PtInRect(FBtnScrollNext.BoundsRect, Pt)) or
+     (TabAtPos(Pt.X, Pt.Y) <> -1) then
   begin
-    inherited;
-    Exit;
+    Message.Result := 1; // Overrides the designer mouse handler for this click
   end;
 
-  X := Message.XPos;
-  Y := Message.YPos;
-
-  // Scroll buttons: child TSpeedButtons don't fire at design time
-  if FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
-  begin
-    ScrollPrev(nil);
-    Exit;
-  end;
-  if FBtnScrollNext.Visible and PtInRect(FBtnScrollNext.BoundsRect, Point(X, Y)) then
-  begin
-    ScrollNext(nil);
-    Exit;
-  end;
-
-  // Tab click: select the tab and update the Object Inspector
-  Idx := TabAtPos(X, Y);
-  if Idx <> -1 then
-  begin
-    {$IFDEF LCLDesign}
-    if Assigned(GlobalDesignHook) then
-      GlobalDesignHook.SelectOnlyThis(Self);
-    {$ENDIF}
-    SetDesignTabIndex(Idx);
-    {$IFDEF LCLDesign}
-    if Assigned(GlobalDesignHook) then
-      GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
-    {$ENDIF}
-  end;
+  //inherited;
 end;
 
 procedure TExtTabCtrl.DblClick;
