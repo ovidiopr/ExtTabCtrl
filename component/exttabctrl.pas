@@ -43,11 +43,15 @@ type
     FAddIndex: TImageIndex;
     FCloseIndex: TImageIndex;
 
+    FSaved: Array[0..3] of TImageIndex;
+
     FOnChange: TNotifyEvent;
     procedure SetIndex(Index: Integer; Value: TImageIndex);
   public
     constructor Create(AOwner: TExtTabCtrl);
     procedure Assign(Source: TPersistent); override;
+    procedure Save;
+    procedure Restore;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
     property PrevIndex: TImageIndex index 0 read FPrevIndex write SetIndex default -1;
@@ -333,6 +337,7 @@ type
       const AXProportion, AYProportion: Double); override;
     procedure PrepareInternalImages(ARotation: Integer);
     procedure UpdateImages;
+    procedure UpdateButtonImages;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -459,7 +464,7 @@ begin
       DestIntf.SetSize(SrcIntf.Width, SrcIntf.Height);
 
     case Degrees of
-      90: // 90° clockwise: src(x,y) --> dest(Height-1-y, x)
+      90: // 90° CCW: src(x,y) --> dest(Height-1-y, x)
         for y := 0 to SrcIntf.Height - 1 do
           for x := 0 to SrcIntf.Width - 1 do
             DestIntf.Colors[SrcIntf.Height - 1 - y, x] := SrcIntf.Colors[x, y];
@@ -467,7 +472,7 @@ begin
         for y := 0 to SrcIntf.Height - 1 do
           for x := 0 to SrcIntf.Width - 1 do
             DestIntf.Colors[SrcIntf.Width - 1 - x, SrcIntf.Height - 1 - y] := SrcIntf.Colors[x, y];
-      270: // 270° clockwise (= 90° CCW): src(x,y) --> dest(y, Width-1-x)
+      270: // 270° CCW: src(x,y) --> dest(y, Width-1-x)
         for y := 0 to SrcIntf.Height - 1 do
           for x := 0 to SrcIntf.Width - 1 do
             DestIntf.Colors[y, SrcIntf.Width - 1 - x] := SrcIntf.Colors[x, y];
@@ -540,6 +545,8 @@ begin
   FNextIndex := -1;
   FAddIndex := -1;
   FCloseIndex := -1;
+
+  Save;
 end;
 
 procedure TButtonImages.Assign(Source: TPersistent);
@@ -554,6 +561,22 @@ begin
   end
   else
     inherited Assign(Source);
+end;
+
+procedure TButtonImages.Restore;
+begin
+  FPrevIndex := FSaved[0];
+  FNextIndex := FSaved[1];
+  FAddIndex := FSaved[2];
+  FCloseIndex := FSaved[3];
+end;
+
+procedure TButtonImages.Save;
+begin
+  FSaved[0] := FPrevIndex;
+  FSaved[1] := FNextIndex;
+  FSaved[2] := FAddIndex;
+  FSaved[3] := FCloseIndex;
 end;
 
 procedure TButtonImages.SetIndex(Index: Integer; Value: TImageIndex);
@@ -1267,7 +1290,11 @@ begin
   if FImages <> AValue then
   begin
     FImages := AValue;
-    if FImages <> nil then FImages.FreeNotification(Self);
+    if FImages <> nil then
+      FImages.FreeNotification(Self)
+    else
+      FButtonImages.Save;
+    UpdateButtonImages;
     InvalidateTabImageCaches;
     InvalidateLayout;
   end;
@@ -1314,6 +1341,7 @@ var
   PPI: Integer;
   Scale: Double;
 begin
+  UpdateButtonImages;
   (*
   if Assigned(FImages) then
   begin
@@ -2014,7 +2042,7 @@ begin
     if Assigned(FImages) and (FButtonImages.CloseIndex > -1) then
       CloseW := FImages.WidthForPPI[FImagesWidth.CloseWidth, ppi]
     else
-      CloseW := FInternalImages.WidthForPPI[FImagesWidth.CloseWidth, ppi];
+      CloseW := FInternalImages.WidthForPPI[0, ppi];
     {
     if Assigned(FCloseImage) and not FCloseImage.Empty then
       CloseW := FCloseImage.Width
@@ -2045,7 +2073,7 @@ begin
     if Assigned(FImages) and (FButtonImages.CloseIndex > -1) then
       CloseH := FImages.HeightForPPI[FImagesWidth.CloseWidth, ppi]
     else
-      CloseH := FInternalImages.HeightForPPI[FImagesWidth.CloseWidth, ppi];
+      CloseH := FInternalImages.HeightForPPI[0, ppi];
     {
     if Assigned(FCloseImage) and not FCloseImage.Empty then
       CloseH := FCloseImage.Height
@@ -3344,6 +3372,8 @@ begin
     FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
   end;
 
+  FButtonImages.Save;
+
   ButtonImagesChanged(Self);
 end;
 
@@ -3407,6 +3437,37 @@ begin
     ButtonImagesChanged(Self);
 
   InvalidateLayout;
+end;
+
+procedure TExtTabCtrl.UpdateButtonImages;
+var
+  png: TCustomBitmap;
+begin
+  if FImages <> nil then
+  begin
+    FBtnAdd.Images := FImages;
+    FBtnScrollPrev.Images := FImages;
+    FBtnScrollNext.Images := FImages;
+    FButtonImages.Restore;
+    FBtnAdd.ImageIndex := FButtonImages.AddIndex;
+    FBtnScrollPrev.ImageIndex := FButtonImages.PrevIndex;
+    FBtnScrollNext.ImageIndex := FButtonImages.NextIndex;
+    FBtnAdd.ImageWidth := ImagesWidth.AddWidth;
+    FBtnScrollPrev.ImageWidth := ImagesWidth.PrevWidth;
+    FBtnScrollNext.ImageWidth := ImagesWidth.NextWidth;
+  end else
+  begin
+    PrepareInternalImages(GetRotationForPosition);
+    FBtnAdd.Images := FInternalImages;
+    FBtnScrollPrev.Images := FInternalImages;
+    FBtnScrollNext.Images := FInternalImages;
+    FBtnAdd.ImageIndex := cAddIndex;
+    FBtnScrollPrev.ImageIndex := cPrevIndex;
+    FBtnScrollNext.ImageIndex := cNextIndex;
+    FBtnAdd.ImageWidth := 0;
+    FBtnScrollPrev.ImageWidth := 0;
+    FBtnScrollNext.ImageWidth := 0;
+  end;
 end;
 
 procedure TExtTabCtrl.DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
@@ -3666,8 +3727,6 @@ begin
 end;
 
 constructor TExtTabCtrl.Create(AOwner: TComponent);
-var
-  res: TCustomImageListResolution;
 begin
   inherited Create(AOwner);
 
@@ -3711,13 +3770,11 @@ begin
   FBtnAdd.Images := FInternalImages;
   FBtnAdd.ImageIndex := cAddIndex;
   FBtnAdd.OnClick := @AddBtnClick;
-  //FBtnAdd.BorderSpacing.Around := 2;
   FBtnAdd.BringToFront;
 
   FBtnScrollPrev := TSpeedButton.Create(Self);
   FBtnScrollPrev.Name := 'BtnScrollPrev';
   FBtnScrollPrev.Parent := Self;
-  //FBtnScrollPrev.BorderSpacing.Around := 2;
   FBtnScrollPrev.Flat := True;
   FBtnScrollPrev.ParentShowHint := False;
   FBtnScrollPrev.ShowHint := ShowHint;
@@ -3728,7 +3785,6 @@ begin
   FBtnScrollNext := TSpeedButton.Create(Self);
   FBtnScrollNext.Name := 'BtnScrollNext';
   FBtnScrollNext.Parent := Self;
-  //FBtnScrollNext.BorderSpacing.Around := 2;
   FBtnScrollNext.Flat := True;
   FBtnScrollNext.ParentShowHint := False;
   FBtnScrollNext.ShowHint := ShowHint;
@@ -3736,7 +3792,7 @@ begin
   FBtnScrollNext.ImageIndex := cNextIndex;
   FBtnScrollNext.OnClick := @ScrollNext;
 
-  // Cross for closing tabs is not a button, it is painted directly on the canvas.
+  // Cross for closing tabs is not a button, it is painted directly onto the canvas.
 
   FLastRotation := -1;
 
