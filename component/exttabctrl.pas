@@ -1,3 +1,10 @@
+{ to do:
+  - internal images for dark mode
+  - rotate images from external image list
+  - show scaled tab images
+  - AutoSize crashing when tab images are shown at 144ppi}
+
+
 unit ExtTabCtrl;
 
 {$mode objfpc}{$H+}
@@ -193,7 +200,8 @@ type
     FBtnAdd: TSpeedButton;
 
     FImages: TCustomImageList;
-    FInternalImages: TCustomImageList;
+    FInternalBtnImages: TCustomImageList;  // Imagelist with button images
+    FInternalTabImages: TCustomImageList;  // Copy of FImages containing rotated images
     FButtonImages: TButtonImages;
     FButtonHints: TButtonHints;
     FImagesWidth: TImagesWidth;
@@ -335,7 +343,7 @@ type
 
     procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
       const AXProportion, AYProportion: Double); override;
-    procedure PrepareInternalImages(ARotation: Integer);
+    procedure PrepareInternalBtnImages(ARotation: Integer);
     procedure UpdateImages;
     procedure UpdateButtonImages;
   public
@@ -1247,7 +1255,7 @@ begin
         SetBounds(Left, Top, H, W);
       end;
 
-      PrepareInternalImages(GetRotationForPosition);
+      PrepareInternalBtnImages(GetRotationForPosition);
       AnchorButtons;
 
       // Mark the internal layout (tab rects) as dirty
@@ -1280,7 +1288,7 @@ begin
     FTabs[i].FTextHeight := -1;
   end;
   if btnChanged then
-    PrepareInternalImages(GetRotationForPosition);
+    PrepareInternalBtnImages(GetRotationForPosition);
   AnchorButtons;
   Invalidate;
 end;
@@ -1640,7 +1648,7 @@ begin
   if Assigned(FImages) and (FButtonImages.AddIndex > -1) then
     Result := FImages
   else
-    Result := FInternalImages;
+    Result := FInternalBtnImages;
 end;
 
 function TExtTabCtrl.GetCloseButtonImages: TCustomImageList;
@@ -1648,7 +1656,7 @@ begin
   if Assigned(FImages) and (FButtonImages.CloseIndex > -1) then
     Result := FImages
   else
-    Result := FInternalImages;
+    Result := FInternalBtnImages;
 end;
 
 function TExtTabCtrl.GetScrollButtonImages(Which: Integer): TCustomImageList;
@@ -1662,7 +1670,7 @@ begin
   if Assigned(FImages) and (imgIndex > -1) then
     Result := FImages
   else
-    Result := FInternalImages;
+    Result := FInternalBtnImages;
 end;
 
 function TExtTabCtrl.CloseButtonRect(Tab: TExtTab): TRect;
@@ -2042,7 +2050,7 @@ begin
     if Assigned(FImages) and (FButtonImages.CloseIndex > -1) then
       CloseW := FImages.WidthForPPI[FImagesWidth.CloseWidth, ppi]
     else
-      CloseW := FInternalImages.WidthForPPI[0, ppi];
+      CloseW := FInternalBtnImages.WidthForPPI[0, ppi];
     {
     if Assigned(FCloseImage) and not FCloseImage.Empty then
       CloseW := FCloseImage.Width
@@ -2073,13 +2081,7 @@ begin
     if Assigned(FImages) and (FButtonImages.CloseIndex > -1) then
       CloseH := FImages.HeightForPPI[FImagesWidth.CloseWidth, ppi]
     else
-      CloseH := FInternalImages.HeightForPPI[0, ppi];
-    {
-    if Assigned(FCloseImage) and not FCloseImage.Empty then
-      CloseH := FCloseImage.Height
-    else
-      CloseH := GetScale(16);
-    }
+      CloseH := FInternalBtnImages.HeightForPPI[0, ppi];
     TxtRect := R;
     InflateRect(TxtRect, -Indent, -Indent);
 
@@ -2161,9 +2163,9 @@ begin
       FButtonImages.CloseIndex
     );
   end else
-  if Assigned(FInternalImages) then
+  if Assigned(FInternalBtnImages) then
   begin
-    imgRes := FInternalImages.ResolutionForPPI[0, ppi, scale];
+    imgRes := FInternalBtnImages.ResolutionForPPI[0, ppi, scale];
     imgRes.Draw(ACanvas,
       CloseR.Left + (CloseR.Width - imgRes.Width) div 2,
       CloseR.Top + (CloseR.Height - imgRes.Height) div 2,
@@ -2717,6 +2719,8 @@ begin
   if not FLayoutDirty then Exit;
   FLayoutDirty := False;
 
+  //DisableAutoSizing;
+
   Canvas.Font.Assign(Font);
   Pos := 0;
   Padding := GetScale(cContentIndent)*2;
@@ -2824,6 +2828,11 @@ begin
 
   FTotalTabsSize := Pos + GetScale(cTabOverlap);
   UpdateScrollButtons;
+
+  //InvalidatePreferredSize;
+  //if AutoSize then AdjustSize;
+  //EnableAutoSizing;
+  //if AutoSize then AdjustSize;
 end;
 
 procedure TExtTabCtrl.Paint;
@@ -2869,7 +2878,6 @@ begin
     if FDragging and (FDragTargetIndex <> -1) then
     begin
       Canvas.Pen.Color := clHotLight;
-
       Canvas.Pen.Width := 3;
 
       if FDragTargetIndex < FTabs.Count then
@@ -3457,10 +3465,10 @@ begin
     FBtnScrollNext.ImageWidth := ImagesWidth.NextWidth;
   end else
   begin
-    PrepareInternalImages(GetRotationForPosition);
-    FBtnAdd.Images := FInternalImages;
-    FBtnScrollPrev.Images := FInternalImages;
-    FBtnScrollNext.Images := FInternalImages;
+    PrepareInternalBtnImages(GetRotationForPosition);
+    FBtnAdd.Images := FInternalBtnImages;
+    FBtnScrollPrev.Images := FInternalBtnImages;
+    FBtnScrollNext.Images := FInternalBtnImages;
     FBtnAdd.ImageIndex := cAddIndex;
     FBtnScrollPrev.ImageIndex := cPrevIndex;
     FBtnScrollNext.ImageIndex := cNextIndex;
@@ -3671,12 +3679,12 @@ begin
     FOnTabCreated(Self);
 end;
 
-procedure TExtTabCtrl.PrepareInternalImages(ARotation: Integer);
+procedure TExtTabCtrl.PrepareInternalBtnImages(ARotation: Integer);
 var
   img100, img150, img200: TCustomBitmap;
 begin
-  FInternalImages.Clear;
-  FInternalImages.RegisterResolutions([16, 24, 32]);
+  FInternalBtnImages.Clear;
+  FInternalBtnImages.RegisterResolutions([16, 24, 32]);
   img100 := TPortableNetworkGraphic.Create;
   img150 := TPortableNetworkGraphic.Create;
   img200 := TPortableNetworkGraphic.Create;
@@ -3690,7 +3698,7 @@ begin
       RotateImage(img150, 270); //ARotation);
       RotateImage(img200, 270); //ARotation);
     end;
-    FInternalImages.AddMultipleResolutions([img100, img150, img200]);
+    FInternalBtnImages.AddMultipleResolutions([img100, img150, img200]);
 
     img100.LoadFromResourceName(HInstance, 'tab_next');
     img150.LoadFromResourceName(HInstance, 'tab_next_150');
@@ -3701,7 +3709,7 @@ begin
       RotateImage(img150, 270); //ARotation);
       RotateImage(img200, 270); //ARotation);
     end;
-    FInternalImages.AddMultipleResolutions([img100, img150, img200]);
+    FInternalBtnImages.AddMultipleResolutions([img100, img150, img200]);
 
     img100.LoadFromResourceName(HInstance, 'tab_new');
     img150.LoadFromResourceName(HInstance, 'tab_new_150');
@@ -3712,13 +3720,13 @@ begin
       RotateImage(img150, ARotation);
       RotateImage(img200, ARotation);
     end;
-    FInternalImages.AddMultipleResolutions([img100, img150, img200]);
+    FInternalBtnImages.AddMultipleResolutions([img100, img150, img200]);
 
     img100.LoadFromResourceName(HInstance, 'cross');
     img150.LoadFromResourceName(HInstance, 'cross_150');
     img200.LoadFromResourceName(HInstance, 'cross_200');
     // cross is symmetrical, no need for rotation
-    FInternalImages.AddMultipleResolutions([img100, img150, img200]);
+    FInternalBtnImages.AddMultipleResolutions([img100, img150, img200]);
   finally
     img200.Free;
     img150.Free;
@@ -3748,13 +3756,14 @@ begin
                   toCloseOnMiddleClick, toAllowDragReorder, toGetFocus,
                   toShowFocusRect];
 
-  FInternalImages := TImageList.Create(Self);
-  FInternalImages.Scaled := True;
-  FInternalImages.Width := 16;
-  FInternalImages.Height := 16;
-  FInternalImages.RegisterResolutions([16, 24, 32]);
+  FInternalBtnImages := TImageList.Create(Self);
+  FInternalBtnImages.Scaled := True;
+  FInternalBtnImages.Width := 16;
+  FInternalBtnImages.Height := 16;
+  FInternalBtnImages.RegisterResolutions([16, 24, 32]);
+  PrepareInternalBtnImages(0);
 
-  PrepareInternalImages(0);
+  FInternalTabImages := TImageList.Create(Self);
 
   FButtonImages := TButtonImages.Create(Self);
   FButtonImages.OnChange := @ButtonImagesChanged;
@@ -3767,7 +3776,7 @@ begin
   FBtnAdd.Parent := Self;
   FBtnAdd.Flat := True;
   FBtnAdd.ParentShowHint := False;
-  FBtnAdd.Images := FInternalImages;
+  FBtnAdd.Images := FInternalBtnImages;
   FBtnAdd.ImageIndex := cAddIndex;
   FBtnAdd.OnClick := @AddBtnClick;
   FBtnAdd.BringToFront;
@@ -3778,7 +3787,7 @@ begin
   FBtnScrollPrev.Flat := True;
   FBtnScrollPrev.ParentShowHint := False;
   FBtnScrollPrev.ShowHint := ShowHint;
-  FBtnScrollPrev.Images := FInternalImages;
+  FBtnScrollPrev.Images := FInternalBtnImages;
   FBtnScrollPrev.ImageIndex := cPrevIndex;
   FBtnScrollPrev.OnClick := @ScrollPrev;
 
@@ -3788,7 +3797,7 @@ begin
   FBtnScrollNext.Flat := True;
   FBtnScrollNext.ParentShowHint := False;
   FBtnScrollNext.ShowHint := ShowHint;
-  FBtnScrollNext.Images := FInternalImages;
+  FBtnScrollNext.Images := FInternalBtnImages;
   FBtnScrollNext.ImageIndex := cNextIndex;
   FBtnScrollNext.OnClick := @ScrollNext;
 
@@ -3817,7 +3826,8 @@ begin
   FreeAndNil(FBtnScrollPrev);
   FreeAndNil(FBtnScrollNext);
 
-  FreeAndNil(FInternalImages);
+  FreeAndNil(FInternalBtnImages);
+  FreeAndNil(FInternalTabImages);
   FreeAndNil(FButtonImages);
   FreeAndNil(FButtonHints);
   FreeAndNil(FImagesWidth);
