@@ -619,12 +619,10 @@ begin
 end;
 
 procedure TButtonImages.SetIndex(Index: Integer; Value: TImageIndex);
-var
-  Ptr: ^Integer;
 begin
   if GetIndex(Index) <> Value then
   begin
-    FImgIndex[index] := Value;
+    FImgIndex[Index] := Value;
     if Assigned(FOnChange) then FOnChange(Self);
   end;
 end;
