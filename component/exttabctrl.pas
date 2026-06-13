@@ -192,9 +192,6 @@ type
 
   TExtTabCtrl = class(TCustomControl)
   private
-    type
-      TImageSize = (isz100, isz150, isz200);
-      TCustomBitmapArray = array[TImageSize] of TCustomBitmap;
 
   private
     FUpdateCount: Integer;
@@ -242,7 +239,6 @@ type
     FHoverTab, FHoverCloseTab: Integer;
     FBtnScrollPrev, FBtnScrollNext: TSpeedButton;
 
-    FLastRotation: Integer;
     FAddTabCounter: Integer;
     FImportActive: Boolean;
     FInternalChange: Integer;
@@ -253,8 +249,6 @@ type
     procedure EndInternalChange;
     procedure NormalizeState;
     procedure CancelDrag;
-    procedure ClearGlyphCache;
-//    procedure RefreshGlyphCache;
     procedure InvalidateTabImageCaches;
 
     procedure SetTabIndex(AValue: Integer);
@@ -1018,52 +1012,6 @@ begin
     CancelDrag;
 end;
 
-procedure TExtTabCtrl.ClearGlyphCache;
-begin
-  //FCachedAddGlyph.Clear;
-  //FCachedScrollGlyphs[0].Clear;
-  //FCachedScrollGlyphs[1].Clear;
-  FLastRotation := -1; // Invalidate rotation state
-end;
-          (*
-procedure TExtTabCtrl.RefreshGlyphCache;
-var
-  TargetRotation: Integer;
-  i: Integer;
-  srcImg, destImg: TCustomBitmap;
-begin
-
-  exit;
-
-
-
-
-
-
-  TargetRotation := GetRotationForPosition;
-
-  if (FLastRotation <> TargetRotation) {or FCachedAddGlyph.Empty} then
-  begin
-    FLastRotation := TargetRotation;
-
-    PrepareInternalImages(TargetRotation);
-    {
-    if (toRotateAddImage in FTabOptions) and IsVertical then
-      RotateBitmap(FAddImage, FCachedAddGlyph, TargetRotation)
-    else
-      FCachedAddGlyph.Assign(FAddImage);
-
-    // For vertical layouts the horizontal glyphs need rotating
-    for i := 0 to 1 do
-      if IsVertical then
-        RotateBitmap(FScrollImages[i], FCachedScrollGlyphs[i], 90)
-      else
-        FCachedScrollGlyphs[i].Assign(FScrollImages[i]);
-        }
-  end;
-end;
-                                   *)
-
 procedure TExtTabCtrl.InvalidateTabImageCaches;
 var
   i: Integer;
@@ -1301,10 +1249,6 @@ begin
       FTabPosition := AValue;
       FScrollOffset := 0;
 
-      // Invalidate the glyph cache to trigger a re-rotation of bitmaps
-      // matching the new position during the next RefreshGlyphCache call
-      FLastRotation := -1;
-
       // Rotation angle changed --> per-tab image caches are stale
       InvalidateTabImageCaches;
 
@@ -1318,10 +1262,6 @@ begin
       end;
 
       UpdateBtnImages;
-      {
-      PrepareInternalBtnImages(GetRotationForPosition);
-      PrepareInternalTabImages(GetRotationForPosition);
-      }
       AnchorButtons;
 
       // Mark the internal layout (tab rects) as dirty
@@ -1347,7 +1287,6 @@ begin
   btnChanged := [toRotateAddImage]*AValue <> [toRotateAddImage]*FTabOptions;
   tabChanged := [toRotateTabImages]*AValue <> [toRotateTabImages]*FTabOptions;
   FTabOptions := AValue;
-  FLastRotation := -1;
   FLayoutDirty := True;
   // toActiveBold/Italic affects text measurements, reset all caches
   for i := 0 to FTabs.Count - 1 do
@@ -1452,53 +1391,9 @@ begin
   FBtnAdd.PopupMenu := AValue;
 end;
 
-// When the user assigns indices in ButtonImages, load the corresponding
-// bitmaps from FImages into the internal glyph bitmaps at the correct
-// DPI, then rebuild the glyph cache so the new images take effect
 procedure TExtTabCtrl.ButtonImagesChanged(Sender: TObject);
-var
-  PPI: Integer;
-  Scale: Double;
 begin
   UpdateBtnImages;
-  (*
-  if Assigned(FImages) then
-  begin
-    PPI   := Font.PixelsPerInch;
-    Scale := 1;//GetCanvasScaleFactor;
-
-    if FButtonImages.PrevIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.PrevWidth, PPI, Scale].GetBitmap(FButtonImages.PrevIndex, FScrollImages[0])
-    else
-      LoadBitmapFromRes('tab_prev', FScrollImages[0]);
-
-    if FButtonImages.NextIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.NextWidth, PPI, Scale].GetBitmap(FButtonImages.NextIndex, FScrollImages[1])
-    else
-      LoadBitmapFromRes('tab_next', FScrollImages[1]);
-
-    if FButtonImages.AddIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.AddWidth, PPI, Scale].GetBitmap(FButtonImages.AddIndex, FAddImage)
-    else
-      LoadBitmapFromRes('tab_new', FAddImage);
-
-    if FButtonImages.CloseIndex >= 0 then
-      FImages.ResolutionForPPI[FImagesWidth.CloseWidth, PPI, Scale].GetBitmap(FButtonImages.CloseIndex, FCloseImage)
-    else
-      LoadBitmapFromRes('cross', FCloseImage);
-  end
-  else
-  begin
-    LoadBitmapFromRes('tab_new', FAddImage);
-    LoadBitmapFromRes('cross', FCloseImage);
-    LoadBitmapFromRes('tab_prev', FScrollImages[0]);
-    LoadBitmapFromRes('tab_next', FScrollImages[1]);
-  end;
-
-  ClearGlyphCache;
-  AnchorButtons;
-  InvalidateLayout;
-  *)
 end;
 
 procedure TExtTabCtrl.ImagesWidthChanged(Sender: TObject);
@@ -1837,19 +1732,6 @@ begin
   CloseW := GetCloseButtonImages.WidthForPPI[FImagesWidth.CloseWidth, ppi];
   CloseH := CloseW;
 
-  (*
-  if Assigned(FCloseImage) and not FCloseImage.Empty then
-  begin
-    CloseW := FCloseImage.Width;
-    CloseH := FCloseImage.Height;
-  end
-  else
-  begin
-    CloseW := GetScale(16);
-    CloseH := CloseW;
-  end;
-  *)
-
   M := GetScale(cContentIndent);
 
   if IsHorizontal then
@@ -2096,49 +1978,6 @@ begin
   end;
 end;
 
-(*
-var
-  SrcBmp: TBitmap;
-  Angle: Integer;
-  NeedsRotation: Boolean;
-begin
-  // Cache the bitmap on the TExtTab
-  Angle := GetRotationForPosition;
-  // Invert the angle for images: CCW for tpLeft, CW for tpRight
-  case Angle of
-    90: Angle := 270;
-    270: Angle := 90;
-  end;
-
-  NeedsRotation := (toRotateTabImages in FTabOptions) and (Angle <> 0);
-
-  // Rebuild the cache when stale (first use, source changed, or rotation changed)
-  if (Tab.FCachedTabImage = nil) or (Tab.FCachedImageRotation <> Angle) then
-  begin
-    SrcBmp := TBitmap.Create;
-    try
-      GetBaseTabBitmap(Tab, SrcBmp);
-      if SrcBmp.Empty then Exit;
-
-      if Tab.FCachedTabImage = nil then
-        Tab.FCachedTabImage := TBitmap.Create;
-
-      if NeedsRotation then
-        RotateBitmap(SrcBmp, Tab.FCachedTabImage, Angle)
-      else
-        Tab.FCachedTabImage.Assign(SrcBmp);
-
-      Tab.FCachedImageRotation := Angle;
-    finally
-      SrcBmp.Free;
-    end;
-  end;
-
-  if Assigned(Tab.FCachedTabImage) and not Tab.FCachedTabImage.Empty then
-    ACanvas.Draw(X, Y, Tab.FCachedTabImage);
-end;
-     *)
-
 procedure TExtTabCtrl.DrawRotatedText(ACanvas: TCanvas; const S: String; const R: TRect; Degrees: Integer);
 var
   SavedOrientation: Integer;
@@ -2346,14 +2185,6 @@ begin
     );
   end else
   begin
-       (*
-  if Assigned(FCloseImage) and not FCloseImage.Empty then
-    ACanvas.Draw(CloseR.Left + (CloseR.Width - FCloseImage.Width) div 2,
-                 CloseR.Top + (CloseR.Height - FCloseImage.Height) div 2,
-                 FCloseImage)
-  else
-  begin
-  *)
     // Vector fallback: draw a simple x using the pen
     ACanvas.Pen.Color := IfThen(FHoverCloseTab = Tab.Index, clBlack, clGray);
     ACanvas.Pen.Width := GetScale(1);
@@ -3019,18 +2850,6 @@ begin
     end
     else
       CloseExtent := 0;
-    {
-    if (toShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton and
-       Assigned(FCloseImage) and not FCloseImage.Empty then
-    begin
-      if IsHorizontal then
-        CloseExtent := FCloseImage.Width + GetScale(cContentIndent)
-      else
-        CloseExtent := FCloseImage.Height + GetScale(cContentIndent);
-      end
-    else
-      CloseExtent := 0;
-      }
 
     TabLen := Padding + TxtExtent + ImgExtent + CloseExtent;
 
@@ -3692,7 +3511,7 @@ begin
 
   // Reset image caches: tab images and button glyphs are sized for the old DPI
   InvalidateTabImageCaches;
-  ClearGlyphCache;
+
   // Reload ButtonImages from FImages at the new DPI if indices are set
   if Assigned(FImages) then
     ButtonImagesChanged(Self);
@@ -4149,10 +3968,6 @@ begin
   FBtnScrollNext.Images := FInternalBtnImages;
   FBtnScrollNext.ImageIndex := cNextIndex;
   FBtnScrollNext.OnClick := @ScrollNext;
-
-  // Cross for closing tabs is not a button, it is painted directly onto the canvas.
-
-  FLastRotation := -1;
 
   FMouseDownIndex := -1;
   FDragIndex := -1;
