@@ -1,20 +1,10 @@
-{ to do:
-  -   internal images for dark mode
-  ok  rotate images from external image list
-  ok  show scaled tab images
-  ok  AutoSize crashing when tab images are shown at 144ppi
-  -   Handle case when Images are higher than TabSize
-  -   Right-to-left
-}
-
-
 unit ExtTabCtrl;
 
 {$mode objfpc}{$H+}
 
 interface
 
-uses                    LazLoggerBase,
+uses
   Classes, SysUtils, Controls, FPImage, GraphType, Graphics, Buttons, LCLType, Types, Math,
   LResources, LCLIntf, GraphUtil, ImgList, LMessages, Forms, Menus,
   ComponentEditors, PropEdits, IntfGraphics, GraphPropEdits;
