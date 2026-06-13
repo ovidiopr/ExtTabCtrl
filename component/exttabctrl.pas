@@ -1690,6 +1690,17 @@ begin
     end;
     FBtnScrollNext.Constraints.MinHeight := FTabSize;
     FBtnScrollNext.Constraints.MinWidth := 0;
+
+    if ShowAdd then
+    begin
+      FBtnScrollNext.AnchorSide[akRight].Control := FBtnAdd;
+      FBtnScrollNext.AnchorSide[akRight].Side := asrLeft;
+    end else
+    begin
+      FBtnScrollNext.AnchorSide[akRight].Control := Self;
+      FBtnScrollNext.AnchorSide[akRight].Side := asrRight;
+    end;
+
     // Due to anchoring the button is positioned automatically, no need to
     // specify Left and Top.
     FBtnScrollNext.SetBounds(0, 0, ScrollNextW, FTabSize);
@@ -1755,6 +1766,17 @@ begin
     end;
     FBtnScrollNext.Constraints.MinHeight := 0;
     FBtnScrollNext.Constraints.MinWidth := FTabSize;
+
+    if ShowAdd then
+    begin
+      FBtnScrollNext.AnchorSide[akBottom].Control := FBtnAdd;
+      FBtnScrollNext.AnchorSide[akBottom].Side := asrTop;
+    end else
+    begin
+      FBtnScrollNext.AnchorSide[akBottom].Control := Self;
+      FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
+    end;
+
     FBtnScrollNext.SetBounds(0, 0, FTabSize, ScrollNextH);
   end;
 
