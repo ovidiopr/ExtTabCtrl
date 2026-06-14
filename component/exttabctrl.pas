@@ -182,8 +182,6 @@ type
 
   TExtTabCtrl = class(TCustomControl)
   private
-
-  private
     FUpdateCount: Integer;
     FLayoutDirty: Boolean;
     FTabSize: Integer;
@@ -342,9 +340,9 @@ type
     procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: Integer; WithImplicitConstraints: Boolean); override;
     procedure CMShowHintChanged(var Message: TLMessage); message CM_SHOWHINTCHANGED;
     procedure CMFontChanged(var Message: TLMessage); message CM_FONTCHANGED;
+    procedure CMColorChanged(var Message: TLMessage); message CM_COLORCHANGED;
 
-    procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
-      const AXProportion, AYProportion: Double); override;
+    procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy; const AXProportion, AYProportion: Double); override;
     procedure PrepareInternalBtnImages({%H-}ARotation: Integer);
     procedure PrepareInternalTabImages(ARotation: Integer);
     procedure UpdateImages;
@@ -1931,8 +1929,12 @@ begin
   if Assigned(FImages) and (Tab.ImageIndex > -1) then
   begin
     bmp := TBitmap.Create;
-    GetBaseTabBitmap(Tab, bmp);
-    ACanvas.Draw(X, Y, bmp);
+    try
+      GetBaseTabBitmap(Tab, bmp);
+      ACanvas.Draw(X, Y, bmp);
+    finally
+      bmp.Free;
+    end;
   end;
 end;
 
@@ -2423,7 +2425,7 @@ begin
     end
     else if Tab.Color <> clNone then
     begin
-      // At rest: draw with the tab's own colour
+      // At rest: draw with the tab's own color
       ACanvas.Brush.Color := BaseClr;
       ACanvas.Brush.Style := bsSolid;
     end
@@ -2457,7 +2459,7 @@ begin
     tpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
   end;
 
-  // Separators (For inactive non-hovered tabs without their own colour border)
+  // Separators (For inactive non-hovered tabs without their own color border)
   if not IsActive and (Tab.Index <> FHoverTab) and
      (Tab.Index <> FTabIndex - 1) and (Tab.Color = clNone) then
   begin
@@ -2615,7 +2617,7 @@ var
   ActiveR: TRect;
   StripY, StripX: Integer;
 begin
-  if FTabStyle = tsMacOS then Exit;
+  if (FTabStyle = tsMacOS) then Exit;
 
   ACanvas.Pen.Color := clBtnShadow;
   ACanvas.Pen.Width := 1;
@@ -3441,7 +3443,19 @@ end;
 procedure TExtTabCtrl.CMFontChanged(var Message: TLMessage);
 begin
   inherited;
+
+  // Rebuild the internal button glyphs
+  UpdateBtnImages;
   UpdateImages;
+end;
+
+procedure TExtTabCtrl.CMColorChanged(var Message: TLMessage);
+begin
+  inherited;
+
+  // The system color palette has changed
+  UpdateBtnImages;
+  Invalidate;
 end;
 
 procedure TExtTabCtrl.UpdateImages;
@@ -3581,8 +3595,7 @@ begin
   end;
 end;
 
-procedure TExtTabCtrl.DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
-  const AXProportion, AYProportion: Double);
+procedure TExtTabCtrl.DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy; const AXProportion, AYProportion: Double);
 begin
   inherited;
   if AMode in [lapAutoAdjustWithoutHorizontalScrolling, lapAutoAdjustForDPI] then
