@@ -349,6 +349,7 @@ type
     procedure PrepareInternalTabImages(ARotation: Integer);
     procedure UpdateImages;
     procedure UpdateBtnImages;
+    procedure UpdateTabSizeForImages;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -834,6 +835,7 @@ begin
   FImage := AValue;
   FTextWidth := -1;
   Redraw(Self);
+  if Assigned(FOwnerCtrl) then FOwnerCtrl.UpdateTabSizeForImages;
 end;
 
 procedure TExtTab.SetImageIndex(AValue: TImageIndex);
@@ -844,6 +846,8 @@ begin
   FTextWidth := -1;
   FTextHeight := -1;
   Redraw(Self);
+  if Assigned(FOwnerCtrl) then
+    FOwnerCtrl.UpdateTabSizeForImages;
 end;
 
 procedure TExtTab.Redraw(Sender: TObject);
@@ -1105,6 +1109,9 @@ begin
   begin
     FTabSize := AValue;
     InvalidateLayout;
+
+    // If the new size is too small for the current images, grow it back
+    UpdateTabSizeForImages;
   end;
 end;
 
@@ -1288,6 +1295,7 @@ begin
     PrepareInternalTabImages(GetRotationForPosition);
   end;
   AnchorButtons;
+  UpdateTabSizeForImages;
   Invalidate;
 end;
 
@@ -1297,7 +1305,7 @@ begin
   begin
     FImages := AValue;
     if FImages <> nil then
-//      FImages.FreeNotification(Self)
+      FImages.FreeNotification(Self)
     else
       FButtonImages.Save;
     UpdateBtnImages;
@@ -1443,7 +1451,6 @@ var
   ShowAdd: Boolean;
   NextLeft, NextTop: Integer;
   AddLeft, AddTop: Integer;
-  MinStrip: Integer;
   imgBorder: Integer;
 begin
   if (csDestroying in ComponentState) or not HandleAllocated then Exit;
@@ -1465,43 +1472,6 @@ begin
     AddW := WidthForPPI[FImagesWidth.AddWidth, ppi];
     AddH := HeightForPPI[FImagesWidth.AddWidth, ppi];
   end;
-
-  (*  THIS CAUSES A HIGH-DPI CRASH --> move to somewhere else (SetTabSize, SetImages)
-  // Populate the cache first so the size variables below reflect the
-  // already-rotated glyphs that will actually be drawn, not the raw
-  // source bitmaps
-  RefreshGlyphCache;
-
-  ScaledTabSize := GetScale(FTabSize);
-  ScrollPrevW := FCachedScrollGlyphs[0].Width;
-  ScrollPrevH := FCachedScrollGlyphs[0].Height;
-  ScrollNextW := FCachedScrollGlyphs[1].Width;
-  ScrollNextH := FCachedScrollGlyphs[1].Height;
-  AddW := FCachedAddGlyph.Width;
-  AddH := FCachedAddGlyph.Height;
-
-  // If any glyph is larger than the current tab strip, expand it to fit
-  if IsHorizontal then
-  begin
-    MinStrip := Max(Max(ScrollPrevH, ScrollNextH), AddH);
-    if FTabSize < MinStrip then
-    begin
-      FTabSize := MinStrip div GetScale(1);   // (wp) ???
-      InvalidatePreferredSize;
-      if AutoSize then AdjustSize;
-    end;
-  end
-  else
-  begin
-    MinStrip := Max(Max(ScrollPrevW, ScrollNextW), AddW);
-    if FTabSize < MinStrip then
-    begin
-      FTabSize := MinStrip div GetScale(1);    // (wp) ???
-      InvalidatePreferredSize;
-      if AutoSize then AdjustSize;
-    end;
-  end;
-  *)
 
   // The Add button is always visible at design time
   ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
@@ -2750,7 +2720,7 @@ var
   TxtExtent, ImgExtent,
   CloseExtent, Padding, ppi: Integer;
   ActiveExtra: TFontStyles;
-  ImgW, ImgH, MinStrip: Integer;
+  ImgW, ImgH: Integer;
 begin
   if not FLayoutDirty then Exit;
   FLayoutDirty := False;
@@ -2816,18 +2786,6 @@ begin
       ImgH := FTabs[i].Image.Height;
       ImgExtent := ImgW + GetScale(cImageSpacing);
     end;
-              (*  THIS CAUSES A HIGH-DPI CRASH --> move to somewhere else (SetTabSize, SetImages)
-    // Expand the tab strip if this image is taller (horizontal) or wider
-    // (vertical) than the current strip thickness
-    MinStrip := IfThen(IsHorizontal, ImgH, ImgW) + GetScale(cContentIndent)*2;
-//    if (MinStrip > GetScale(cContentIndent)*2) and (GetScale(FTabSize) < MinStrip) then
-    if (MinStrip > GetScale(cContentIndent)*2) and (FTabSize < MinStrip) then
-    begin
-      FTabSize := MinStrip div GetScale(1);
-      InvalidatePreferredSize;
-      if AutoSize then AdjustSize;
-    end;
-             *)
 
     if (toShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton then
     begin
@@ -3547,6 +3505,80 @@ begin
       FBtnScrollNext.ImageWidth := ImagesWidth.NextWidth;
     end;
   end;
+
+  // Grow FTabSize if needed so none of the glyphs/images get clipped
+  UpdateTabSizeForImages;
+end;
+
+// Ensures FTabSize is large enough to accommodate the largest image
+procedure TExtTabCtrl.UpdateTabSizeForImages;
+var
+  ppi: Integer;
+  MinStrip: Integer;
+  i, ImgExtent: Integer;
+begin
+  if (csLoading in ComponentState) or (csDestroying in ComponentState) then
+    Exit;
+
+  ppi := Font.PixelsPerInch;
+
+  // Start with the scroll/add button glyph sizes
+  if IsHorizontal then
+    MinStrip := Max(Max(GetScrollButtonImages(0).HeightForPPI[FImagesWidth.PrevWidth, ppi],
+                         GetScrollButtonImages(1).HeightForPPI[FImagesWidth.NextWidth, ppi]),
+                     GetAddButtonImages.HeightForPPI[FImagesWidth.AddWidth, ppi])
+  else
+    MinStrip := Max(Max(GetScrollButtonImages(0).WidthForPPI[FImagesWidth.PrevWidth, ppi],
+                         GetScrollButtonImages(1).WidthForPPI[FImagesWidth.NextWidth, ppi]),
+                     GetAddButtonImages.WidthForPPI[FImagesWidth.AddWidth, ppi]);
+
+  // Account for the close button glyph
+  if toShowCloseButton in FTabOptions then
+  begin
+    if IsHorizontal then
+      MinStrip := Max(MinStrip, GetCloseButtonImages.HeightForPPI[FImagesWidth.CloseWidth, ppi])
+    else
+      MinStrip := Max(MinStrip, GetCloseButtonImages.WidthForPPI[FImagesWidth.CloseWidth, ppi]);
+  end;
+
+  // Account for per-tab images coming from the shared ImageList
+  if Assigned(FImages) then
+  begin
+    if IsHorizontal then
+      MinStrip := Max(MinStrip, FInternalTabImages.HeightForPPI[FImagesWidth.TabsWidth, ppi])
+    else
+      MinStrip := Max(MinStrip, FInternalTabImages.WidthForPPI[FImagesWidth.TabsWidth, ppi]);
+  end;
+
+  // Account for standalone Tab.Image bitmaps
+  for i := 0 to FTabs.Count - 1 do
+  begin
+    if Assigned(FTabs[i].FImage) and not FTabs[i].FImage.Empty then
+    begin
+      if IsHorizontal then
+        ImgExtent := FTabs[i].FImage.Height
+      else
+        ImgExtent := FTabs[i].FImage.Width;
+      MinStrip := Max(MinStrip, ImgExtent);
+    end;
+  end;
+
+  // Leave room for the content indent on both sides of the image
+  Inc(MinStrip, GetScale(cContentIndent)*2);
+
+  // Convert back from device pixels to the 96dpi-reference unit,
+  // and grow the tab strip if it is currently too small
+  MinStrip := MinStrip div GetScale(1);
+  if FTabSize < MinStrip then
+  begin
+    FTabSize := MinStrip;
+    if HandleAllocated then
+    begin
+      InvalidatePreferredSize;
+      if AutoSize then AdjustSize;
+    end;
+    InvalidateLayout;
+  end;
 end;
 
 procedure TExtTabCtrl.DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
@@ -3558,6 +3590,7 @@ begin
     if IsStoredTabSize then
       FTabSize := round(FTabSize * AXProportion);
     AnchorButtons;
+    UpdateTabSizeForImages;
   end;
 end;
 
