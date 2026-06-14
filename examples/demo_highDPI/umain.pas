@@ -1,4 +1,4 @@
-unit Unit1;
+unit uMain;
 
 { Darkmode:
   - Windows: Comment/uncomment the line in the initialization part.

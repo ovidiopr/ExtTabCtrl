@@ -7,10 +7,10 @@ object Form1: TForm1
   ClientHeight = 353
   ClientWidth = 427
   ShowHint = True
-  LCLVersion = '4.99.0.0'
+  LCLVersion = '4.6.0.0'
   object ExtTabCtrl1: TExtTabCtrl
     Left = 4
-    Height = 26
+    Height = 28
     Top = 4
     Width = 419
     Align = alTop
@@ -39,6 +39,7 @@ object Form1: TForm1
         ImageIndex = 8
       end>
     TabIndex = 0
+    TabSize = 28
     ButtonImages.PrevIndex = 1
     ButtonImages.NextIndex = 2
     ButtonImages.AddIndex = 0
@@ -47,10 +48,11 @@ object Form1: TForm1
   end
   object RadioGroup1: TRadioGroup
     Left = 80
-    Height = 105
+    Height = 99
     Top = 48
-    Width = 112
+    Width = 101
     AutoFill = True
+    AutoSize = True
     Caption = 'Tab Positions'
     ChildSizing.LeftRightSpacing = 6
     ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
@@ -59,8 +61,8 @@ object Form1: TForm1
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 1
-    ClientHeight = 85
-    ClientWidth = 108
+    ClientHeight = 72
+    ClientWidth = 91
     ItemIndex = 0
     Items.Strings = (
       'tpTop'
@@ -73,27 +75,27 @@ object Form1: TForm1
   end
   object cbRotateNewTabBtn: TCheckBox
     Left = 128
-    Height = 19
+    Height = 18
     Top = 213
-    Width = 136
+    Width = 151
     Caption = 'Rotate "Add Tab" icon'
     TabOrder = 2
     OnChange = cbRotateNewTabBtnChange
   end
   object cbUseExternalImages: TCheckBox
     Left = 128
-    Height = 19
+    Height = 18
     Top = 248
-    Width = 132
+    Width = 151
     Caption = 'Use external imagelist'
     TabOrder = 3
     OnChange = cbUseExternalImagesChange
   end
   object cbShowNewTabBtn: TCheckBox
     Left = 128
-    Height = 19
+    Height = 18
     Top = 192
-    Width = 144
+    Width = 158
     Caption = 'Show "Add Tab" button'
     Checked = True
     State = cbChecked
@@ -102,10 +104,11 @@ object Form1: TForm1
   end
   object RadioGroup2: TRadioGroup
     Left = 216
-    Height = 128
+    Height = 117
     Top = 48
-    Width = 98
+    Width = 103
     AutoFill = True
+    AutoSize = True
     Caption = 'Tab Style'
     ChildSizing.LeftRightSpacing = 6
     ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
@@ -114,8 +117,8 @@ object Form1: TForm1
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 1
-    ClientHeight = 108
-    ClientWidth = 94
+    ClientHeight = 90
+    ClientWidth = 93
     ItemIndex = 0
     Items.Strings = (
       'tsFlat'
@@ -129,9 +132,9 @@ object Form1: TForm1
   end
   object cbRotateTabIcons: TCheckBox
     Left = 128
-    Height = 19
+    Height = 18
     Top = 269
-    Width = 103
+    Width = 119
     Caption = 'Rotate tab icons'
     TabOrder = 6
     OnChange = cbRotateTabIconsChange
