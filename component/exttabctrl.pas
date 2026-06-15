@@ -244,6 +244,8 @@ type
     procedure AddBtnClick(Sender: TObject);
     procedure ScrollPrev(Sender: TObject);
     procedure ScrollNext(Sender: TObject);
+    procedure AddBtnPaint(Sender: TObject);
+    procedure ScrollBtnPaint(Sender: TObject);
 
     procedure SetTabStyle(AValue: TTabStyle);
     procedure SetTabPosition(AValue: TTabPosition);
@@ -286,10 +288,6 @@ type
     function GetTabImageHeight(Tab: TExtTab): Integer;
     function GetTabTextBounds(ACanvas: TCanvas; const R: TRect; Tab: TExtTab): TRect;
     procedure GetBaseTabBitmap(Tab: TExtTab; Dest: TBitmap);
-
-    // Icon drawing helpers, produce vector glyphs into a TBitmap
-    procedure DrawBtnArrow(ABmp: TBitmap; AForward, AHorizontal: Boolean);
-    procedure DrawBtnAdd(ABmp: TBitmap);
   protected
   const
     cDefaultTabSize = 26;
@@ -567,6 +565,102 @@ begin
   else
     Result := Round(ScreenInfo.PixelsPerInchX/96)*100; // 200, 300, 400, ...
 end;
+
+// Vector icon helpers
+// Each helper draws into a TBitmap that is already the correct size
+
+procedure DrawBtnArrow(ACanvas: TCanvas; ARect: TRect; AForward, AHorizontal: Boolean);
+var
+  ASize, CX, CY, R: Integer;
+  P: array[0..2] of TPoint;
+begin
+  CX := ARect.Width div 2;
+  CY := ARect.Height div 2;
+  ASize := Min(ARect.Width, ARect.Height);
+
+  // R determines the scale of the triangle
+  R := Max(4, 2*ASize div 5);
+
+  // Mathematically precise 45-degree slope assignments
+  if AHorizontal then
+  begin
+    if AForward then begin // Pointing Right
+      P[0] := Point(CX - (R div 2), CY - R);
+      P[1] := Point(CX + (R div 2), CY);
+      P[2] := Point(CX - (R div 2), CY + R);
+    end
+    else
+    begin // Pointing Left
+      P[0] := Point(CX + (R div 2), CY - R);
+      P[1] := Point(CX - (R div 2), CY);
+      P[2] := Point(CX + (R div 2), CY + R);
+    end;
+  end
+  else
+  begin
+    if AForward then begin // Pointing Down
+      P[0] := Point(CX - R, CY - (R div 2));
+      P[1] := Point(CX + R, CY - (R div 2));
+      P[2] := Point(CX,     CY + (R div 2));
+    end
+    else
+    begin // Pointing Up
+      P[0] := Point(CX - R, CY + (R div 2));
+      P[1] := Point(CX + R, CY + (R div 2));
+      P[2] := Point(CX,     CY - (R div 2));
+    end;
+  end;
+
+  // Single-pass rendering: dark blue border, light blue fill
+  ACanvas.Pen.Color := $009E4320;
+  ACanvas.Pen.Width := 1;
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Brush.Color := $00F79A6D;
+  ACanvas.Brush.Style := bsSolid;
+
+  ACanvas.Polygon(P);
+end;
+
+procedure DrawBtnAdd(ACanvas: TCanvas; ARect: TRect);
+var
+  ASize, CX, CY, L, W: Integer;
+  P: array[0..11] of TPoint;
+begin
+  CX := ARect.Width div 2;
+  CY := ARect.Height div 2;
+
+  ASize := Min(ARect.Width, ARect.Height);
+
+  // L = Length of the cross arms from center
+  L := 2*ASize div 5;
+  // W = Half-thickness of the cross arms (Total thickness will be W*2)
+  W := Max(2, ASize div 6);
+
+  // Plot out a thick, symmetrical 12-pointed cross clockwise
+  P[0]  := Point(CX - W, CY - L); // Top arm, top-left
+  P[1]  := Point(CX + W, CY - L); // Top arm, top-right
+  P[2]  := Point(CX + W, CY - W); // Inner corner top-right
+  P[3]  := Point(CX + L, CY - W); // Right arm, top-left
+  P[4]  := Point(CX + L, CY + W); // Right arm, bottom-left
+  P[5]  := Point(CX + W, CY + W); // Inner corner bottom-right
+  P[6]  := Point(CX + W, CY + L); // Bottom arm, bottom-right
+  P[7]  := Point(CX - W, CY + L); // Bottom arm, bottom-left
+  P[8]  := Point(CX - W, CY + W); // Inner corner bottom-left
+  P[9]  := Point(CX - L, CY + W); // Left arm, bottom-right
+  P[10] := Point(CX - L, CY - W); // Left arm, top-right
+  P[11] := Point(CX - W, CY - W); // Inner corner top-left
+
+  // Dark green border and light green fill applied seamlessly in one pass
+  ACanvas.Pen.Color := $00146E20;
+  ACanvas.Pen.Width := 1;
+  ACanvas.Pen.Style := psSolid;
+  ACanvas.Brush.Color := $005CD66A;
+  ACanvas.Brush.Style := bsSolid;
+
+  ACanvas.Polygon(P);
+end;
+
+// End vector icon helpers
 
 { TButtonImages }
 constructor TButtonImages.Create(AOwner: TExtTabCtrl);
@@ -1207,6 +1301,49 @@ begin
   FScrollOffset := Min(MaxScrollOffset, FScrollOffset);
   UpdateScrollButtons;
   Invalidate;
+end;
+
+procedure TExtTabCtrl.AddBtnPaint(Sender: TObject);
+var
+  Btn: TSpeedButton;
+  ImgRes: TScaledImageListResolution;
+  ppi, scale: Integer;
+begin
+  Btn := TSpeedButton(Sender);
+
+  if Assigned(FImages) and (FButtonImages.AddIndex >= 0) then
+  begin
+    ppi := Font.PixelsPerInch;
+    scale := 1;
+    ImgRes := FInternalTabImages.ResolutionForPPI[FImagesWidth.AddWidth, ppi, scale];
+    ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, FButtonImages.AddIndex, gdeNormal);
+  end
+  else
+    DrawBtnAdd(Btn.Canvas, Btn.ClientRect);
+end;
+
+procedure TExtTabCtrl.ScrollBtnPaint(Sender: TObject);
+var
+  Btn: TSpeedButton;
+  ImgRes: TScaledImageListResolution;
+  ppi, scale: Integer;
+  IsNext: Boolean;
+  ImgIndex: Integer;
+begin
+  Btn := TSpeedButton(Sender);
+  IsNext := (Btn = FBtnScrollNext);
+  ImgIndex := IfThen(IsNext, FButtonImages.NextIndex, FButtonImages.PrevIndex);
+
+  // Draw Image from List if available
+  if Assigned(FImages) and (ImgIndex >= 0) then
+  begin
+    ppi := Font.PixelsPerInch;
+    scale := 1;
+    ImgRes := FInternalTabImages.ResolutionForPPI[IfThen(IsNext, FImagesWidth.NextWidth, FImagesWidth.PrevWidth), ppi, scale];
+    ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, ImgIndex, gdeNormal);
+  end
+  else
+    DrawBtnArrow(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
 end;
 
 procedure TExtTabCtrl.SetTabStyle(AValue: TTabStyle);
@@ -2147,7 +2284,7 @@ begin
       ACanvas.Pen.Width := SavedPenWidth;
       ACanvas.Pen.Style := SavedPenStyle;
     end;
-end;
+  end;
 end;
 
 procedure TExtTabCtrl.DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
@@ -3495,12 +3632,7 @@ end;
 
 { Assigns the correct image list and image indices to the buttons. }
 procedure TExtTabCtrl.UpdateBtnImages;
-var
-  Bmp: TBitmap;
-  sz: Integer;
 begin
-  sz := GetScale(16);
-
   // Default: reset Images
   FBtnAdd.Images := nil;
   FBtnScrollPrev.Images := nil;
@@ -3510,74 +3642,9 @@ begin
   if Assigned(FImages) then
     FButtonImages.Restore;
 
-  if Assigned(FImages) and (FButtonImages.AddIndex > -1) then
-  begin
-    FBtnAdd.Images := FInternalTabImages;
-    FBtnAdd.ImageIndex := FButtonImages.AddIndex;
-    FBtnAdd.ImageWidth := FImagesWidth.AddWidth;
-    FBtnAdd.Glyph.Clear;
-  end
-  else
-  begin
-    Bmp := TBitmap.Create;
-    try
-      Bmp.SetSize(sz, sz);
-      Bmp.Transparent := True;
-      Bmp.TransparentColor := clFuchsia;
-      Bmp.Canvas.Brush.Color := clFuchsia;
-      Bmp.Canvas.FillRect(Rect(0, 0, sz, sz));
-      DrawBtnAdd(Bmp);
-      FBtnAdd.Glyph.Assign(Bmp);
-    finally
-      Bmp.Free;
-    end;
-  end;
-
-  if Assigned(FImages) and (FButtonImages.PrevIndex > -1) then
-  begin
-    FBtnScrollPrev.Images := FInternalTabImages;
-    FBtnScrollPrev.ImageIndex := FButtonImages.PrevIndex;
-    FBtnScrollPrev.ImageWidth := FImagesWidth.PrevWidth;
-    FBtnScrollPrev.Glyph.Clear;
-  end
-  else
-  begin
-    Bmp := TBitmap.Create;
-    try
-      Bmp.SetSize(sz, sz);
-      Bmp.Transparent := True;
-      Bmp.TransparentColor := clFuchsia;
-      Bmp.Canvas.Brush.Color := clFuchsia;
-      Bmp.Canvas.FillRect(Rect(0, 0, sz, sz));
-      DrawBtnArrow(Bmp, False, IsHorizontal);
-      FBtnScrollPrev.Glyph.Assign(Bmp);
-    finally
-      Bmp.Free;
-    end;
-  end;
-
-  if Assigned(FImages) and (FButtonImages.NextIndex > -1) then
-  begin
-    FBtnScrollNext.Images := FInternalTabImages;
-    FBtnScrollNext.ImageIndex := FButtonImages.NextIndex;
-    FBtnScrollNext.ImageWidth := FImagesWidth.NextWidth;
-    FBtnScrollNext.Glyph.Clear;
-  end
-  else
-  begin
-    Bmp := TBitmap.Create;
-    try
-      Bmp.SetSize(sz, sz);
-      Bmp.Transparent := True;
-      Bmp.TransparentColor := clFuchsia;
-      Bmp.Canvas.Brush.Color := clFuchsia;
-      Bmp.Canvas.FillRect(Rect(0, 0, sz, sz));
-      DrawBtnArrow(Bmp, True, IsHorizontal);
-      FBtnScrollNext.Glyph.Assign(Bmp);
-    finally
-      Bmp.Free;
-    end;
-  end;
+  FBtnAdd.Invalidate;
+  FBtnScrollPrev.Invalidate;
+  FBtnScrollNext.Invalidate;
 
   // Grow FTabSize if needed so none of the glyphs/images get clipped
   UpdateTabSizeForImages;
@@ -3865,121 +3932,6 @@ begin
     FOnTabCreated(Self);
 end;
 
-// Vector icon helpers
-// Each helper draws into a TBitmap that is already the correct size
-
-procedure TExtTabCtrl.DrawBtnArrow(ABmp: TBitmap; AForward, AHorizontal: Boolean);
-var
-  ASize, CX, CY, R: Integer;
-  P: array[0..2] of TPoint;
-  C: TCanvas;
-begin
-  C := ABmp.Canvas;
-  ASize := ABmp.Width;
-  CX := ASize div 2;
-  CY := ASize div 2;
-
-  // Transparency color similar to border color
-  // This eliminates anti-aliasing artifacts
-  ABmp.Transparent := True;
-  ABmp.TransparentColor := $9F4421;
-  C.Brush.Color := $9F4421;
-  C.Brush.Style := bsSolid;
-  C.FillRect(Rect(0, 0, ASize, ASize));
-
-  // R determines the scale of the triangle
-  R := Max(4, 2*ASize div 5);
-
-  // Mathematically precise 45-degree slope assignments
-  if AHorizontal then
-  begin
-    if AForward then begin // Pointing Right
-      P[0] := Point(CX - (R div 2), CY - R);
-      P[1] := Point(CX + (R div 2), CY);
-      P[2] := Point(CX - (R div 2), CY + R);
-    end
-    else
-    begin // Pointing Left
-      P[0] := Point(CX + (R div 2), CY - R);
-      P[1] := Point(CX - (R div 2), CY);
-      P[2] := Point(CX + (R div 2), CY + R);
-    end;
-  end
-  else
-  begin
-    if AForward then begin // Pointing Down
-      P[0] := Point(CX - R, CY - (R div 2));
-      P[1] := Point(CX + R, CY - (R div 2));
-      P[2] := Point(CX,     CY + (R div 2));
-    end
-    else
-    begin // Pointing Up
-      P[0] := Point(CX - R, CY + (R div 2));
-      P[1] := Point(CX + R, CY + (R div 2));
-      P[2] := Point(CX,     CY - (R div 2));
-    end;
-  end;
-
-  // Single-pass rendering: dark blue border, light blue fill
-  C.Pen.Color := $009E4320;
-  C.Pen.Width := 1;
-  C.Pen.Style := psSolid;
-  C.Brush.Color := $00F79A6D;
-  C.Brush.Style := bsSolid;
-
-  C.Polygon(P);
-end;
-
-procedure TExtTabCtrl.DrawBtnAdd(ABmp: TBitmap);
-var
-  ASize, CX, CY, L, W: Integer;
-  P: array[0..11] of TPoint;
-  C: TCanvas;
-begin
-  C := ABmp.Canvas;
-  ASize := ABmp.Width;
-  CX := ASize div 2;
-  CY := ASize div 2;
-
-  // Transparency color similar to border color
-  // This eliminates anti-aliasing artifacts
-  ABmp.Transparent := True;
-  ABmp.TransparentColor := $156F21;
-  C.Brush.Color := $156F21;
-  C.Brush.Style := bsSolid;
-  C.FillRect(Rect(0, 0, ASize, ASize));
-
-  // L = Length of the cross arms from center
-  L := 2*ASize div 5;
-  // W = Half-thickness of the cross arms (Total thickness will be W*2)
-  W := Max(2, ASize div 6);
-
-  // Plot out a thick, symmetrical 12-pointed cross clockwise
-  P[0]  := Point(CX - W, CY - L); // Top arm, top-left
-  P[1]  := Point(CX + W, CY - L); // Top arm, top-right
-  P[2]  := Point(CX + W, CY - W); // Inner corner top-right
-  P[3]  := Point(CX + L, CY - W); // Right arm, top-left
-  P[4]  := Point(CX + L, CY + W); // Right arm, bottom-left
-  P[5]  := Point(CX + W, CY + W); // Inner corner bottom-right
-  P[6]  := Point(CX + W, CY + L); // Bottom arm, bottom-right
-  P[7]  := Point(CX - W, CY + L); // Bottom arm, bottom-left
-  P[8]  := Point(CX - W, CY + W); // Inner corner bottom-left
-  P[9]  := Point(CX - L, CY + W); // Left arm, bottom-right
-  P[10] := Point(CX - L, CY - W); // Left arm, top-right
-  P[11] := Point(CX - W, CY - W); // Inner corner top-left
-
-  // Dark green border and light green fill applied seamlessly in one pass
-  C.Pen.Color := $00146E20;
-  C.Pen.Width := 1;
-  C.Pen.Style := psSolid;
-  C.Brush.Color := $005CD66A;
-  C.Brush.Style := bsSolid;
-
-  C.Polygon(P);
-end;
-
-// End vector icon helpers
-
 procedure TExtTabCtrl.PrepareInternalTabImages(ARotation: Integer);
 var
   bmp: array of TCustomBitmap = nil;
@@ -4074,6 +4026,7 @@ begin
   FBtnAdd.Flat := True;
   FBtnAdd.ParentShowHint := False;
   FBtnAdd.OnClick := @AddBtnClick;
+  FBtnAdd.OnPaint := @AddBtnPaint;
   FBtnAdd.BringToFront;
 
   FBtnScrollPrev := TSpeedButton.Create(Self);
@@ -4083,6 +4036,8 @@ begin
   FBtnScrollPrev.ParentShowHint := False;
   FBtnScrollPrev.ShowHint := ShowHint;
   FBtnScrollPrev.OnClick := @ScrollPrev;
+  FBtnScrollPrev.OnPaint := @ScrollBtnPaint;
+  FBtnScrollPrev.BringToFront;
 
   FBtnScrollNext := TSpeedButton.Create(Self);
   FBtnScrollNext.Name := 'BtnScrollNext';
@@ -4091,6 +4046,8 @@ begin
   FBtnScrollNext.ParentShowHint := False;
   FBtnScrollNext.ShowHint := ShowHint;
   FBtnScrollNext.OnClick := @ScrollNext;
+  FBtnScrollNext.OnPaint := @ScrollBtnPaint;
+  FBtnScrollNext.BringToFront;
 
   FMouseDownIndex := -1;
   FDragIndex := -1;
