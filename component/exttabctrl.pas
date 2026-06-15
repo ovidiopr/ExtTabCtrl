@@ -2080,7 +2080,9 @@ var
   scale: Integer = 1;
   ppi: Integer;
   effect: TGraphicsDrawEffect;
-  CX, CY, Rad, ArmW: Integer;
+  XClr: TColor;
+  P: array[0..11] of TPoint;
+  D, H, CX, CY: Integer;
   SavedPenColor: TColor;
   SavedPenWidth: Integer;
   SavedPenStyle: TPenStyle;
@@ -2099,12 +2101,9 @@ begin
   if Assigned(FImages) and (FButtonImages.CloseIndex >= 0) then
   begin
     imgRes := FInternalTabImages.ResolutionForPPI[FImagesWidth.CloseWidth, ppi, scale];
-    imgRes.Draw(ACanvas,
-      CloseR.Left + (CloseR.Width - imgRes.Width) div 2,
-      CloseR.Top + (CloseR.Height - imgRes.Height) div 2,
-      FButtonImages.CloseIndex,
-      effect
-    );
+    imgRes.Draw(ACanvas, CloseR.Left + (CloseR.Width - imgRes.Width) div 2,
+                CloseR.Top + (CloseR.Height - imgRes.Height) div 2,
+                FButtonImages.CloseIndex, effect);
   end
   else
   begin
@@ -2114,34 +2113,34 @@ begin
     SavedPenStyle := ACanvas.Pen.Style;
 
     try
-      // Draw simple close icon directly on the tab canvas
-      CX := CloseR.Left + (CloseR.Width div 2);
-      CY := CloseR.Top + (CloseR.Height div 2);
+      CX := CloseR.Left + CloseR.Width div 2;
+      CY := CloseR.Top + CloseR.Height div 2;
+      D := Max(3, (Min(CloseR.Width, CloseR.Height) - 2) div 3);  // reach from centre
+      H := Max(1, D div 3);   // arm half-thickness
 
-      // Scale the size down to a neat, small footprint
-      Rad := CloseR.Width div 5;
-      if Rad < 3 then Rad := 3;
+      XClr := IfThen(FHoverCloseTab = Tab.Index, clRed, TColor($004040CC));
 
-      // Arm thickness MUST be an odd number (1 or 3) for absolute GDI symmetry
-      ArmW := CloseR.Width div 5;
-      if ArmW mod 2 = 0 then Inc(ArmW);
-      if ArmW < 1 then ArmW := 1;
+      // First arm: top-left → bottom-right (12 vertices, clock-wise)
+      // We trace the outline of both arms as one 12-point polygon.
+      P[ 0] := Point(CX - D, CY - D + H);   // left arm, top-left
+      P[ 1] := Point(CX - D + H, CY - D);   // left arm, top-right
+      P[ 2] := Point(CX, CY - H);           // centre top-right notch
+      P[ 3] := Point(CX + D - H, CY - D);   // right arm, top-left
+      P[ 4] := Point(CX + D, CY - D + H);   // right arm, top-right
+      P[ 5] := Point(CX + H, CY);           // centre right notch
+      P[ 6] := Point(CX + D, CY + D - H);   // right arm, bottom-right
+      P[ 7] := Point(CX + D - H, CY + D);   // right arm, bottom-left
+      P[ 8] := Point(CX, CY + H);           // centre bottom-left notch
+      P[ 9] := Point(CX - D + H, CY + D);   // left arm, bottom-right
+      P[10] := Point(CX - D, CY + D - H);   // left arm, bottom-left
+      P[11] := Point(CX - H, CY);           // centre left notch
 
-      if FHoverCloseTab = Tab.Index then
-        ACanvas.Pen.Color := clRed
-      else
-        ACanvas.Pen.Color := $004040CC; // Visible on both light and dark
-
-      ACanvas.Pen.Width := ArmW;
+      ACanvas.Brush.Color := XClr;
+      ACanvas.Brush.Style := bsSolid;
+      ACanvas.Pen.Color := XClr;
+      ACanvas.Pen.Width := 1;
       ACanvas.Pen.Style := psSolid;
-
-      // Diagonal 1: Top-Left to Bottom-Right
-      ACanvas.MoveTo(CX - Rad, CY - Rad);
-      ACanvas.LineTo(CX + Rad + 1, CY + Rad + 1);
-
-      // Diagonal 2: Top-Right to Bottom-Left
-      ACanvas.MoveTo(CX + Rad, CY - Rad);
-      ACanvas.LineTo(CX - Rad - 1, CY + Rad + 1);
+      ACanvas.Polygon(P);
     finally
       // Restore the original state of the Pen regardless of what happened
       ACanvas.Pen.Color := SavedPenColor;
