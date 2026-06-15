@@ -1,7 +1,7 @@
 object Form1: TForm1
-  Left = 302
+  Left = 325
   Height = 353
-  Top = 124
+  Top = 232
   Width = 427
   Caption = 'Form1'
   ClientHeight = 353
@@ -41,10 +41,10 @@ object Form1: TForm1
     TabIndex = 0
     TabSize = 28
     TabOptions = [toActivateNewTab, toShowCloseButton, toShowAddButton, toCloseOnMiddleClick, toAllowDragReorder, toGetFocus]
-    ButtonImages.PrevIndex = 1
-    ButtonImages.NextIndex = 2
-    ButtonImages.AddIndex = 0
-    ButtonImages.CloseIndex = 3
+    ButtonImageIndexes.ScrollPrevIndex = 1
+    ButtonImageIndexes.ScrollNextIndex = 2
+    ButtonImageIndexes.AddIndex = 0
+    ButtonImageIndexes.CloseIndex = 3
     ButtonHints.AddHint = 'Add Tab'
     ButtonHints.ScrollPrevHint = 'Previous Tab'
     ButtonHints.ScrollNextHint = 'Next Tab'
