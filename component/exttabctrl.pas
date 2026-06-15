@@ -3435,11 +3435,11 @@ begin
   inherited;
 
   if Assigned(FBtnAdd) then
-    FBtnAdd.ShowHint := Self.ShowHint;
+    FBtnAdd.ShowHint := Self.ShowHint and (FButtonHints.AddHint <> '');
   if Assigned(FBtnScrollPrev) then
-    FBtnScrollPrev.ShowHint := Self.ShowHint;
+    FBtnScrollPrev.ShowHint := Self.ShowHint and (FButtonHints.ScrollPrevHint <> '');
   if Assigned(FBtnScrollNext) then
-    FBtnScrollNext.ShowHint := Self.ShowHint;
+    FBtnScrollNext.ShowHint := Self.ShowHint and (FButtonHints.ScrollNextHint <> '');
 end;
 
 procedure TExtTabCtrl.CMFontChanged(var Message: TLMessage);
