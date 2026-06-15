@@ -3911,11 +3911,11 @@ begin
     end;
   end;
 
-  // Single-pass rendering: White pen handles the border, Black brush handles the fill
-  C.Pen.Color := clWhite;
+  // Single-pass rendering: dark blue border, light blue fill
+  C.Pen.Color := $009E4320;
   C.Pen.Width := 1;
   C.Pen.Style := psSolid;
-  C.Brush.Color := clBlack;
+  C.Brush.Color := $00F79A6D;
   C.Brush.Style := bsSolid;
 
   C.Polygon(P);
@@ -3958,11 +3958,11 @@ begin
   P[10] := Point(CX - L, CY - W); // Left arm, top-right
   P[11] := Point(CX - W, CY - W); // Inner corner top-left
 
-  // White border and Black fill applied seamlessly in one pass
-  C.Pen.Color := clWhite;
+  // Dark green border and light green fill applied seamlessly in one pass
+  C.Pen.Color := $00146E20;
   C.Pen.Width := 1;
   C.Pen.Style := psSolid;
-  C.Brush.Color := clBlack;
+  C.Brush.Color := $005CD66A;
   C.Brush.Style := bsSolid;
 
   C.Polygon(P);
