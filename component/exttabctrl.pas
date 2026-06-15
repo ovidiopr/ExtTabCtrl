@@ -634,7 +634,7 @@ begin
   // L = Length of the cross arms from center
   L := 2*ASize div 5;
   // W = Half-thickness of the cross arms (Total thickness will be W*2)
-  W := Max(2, ASize div 6);
+  W := Max(2, ASize div 7);
 
   // Plot out a thick, symmetrical 12-pointed cross clockwise
   P[0]  := Point(CX - W, CY - L); // Top arm, top-left
@@ -1407,19 +1407,21 @@ var
   tabChanged: Boolean;
 begin
   if FTabOptions = AValue then Exit;
-  tabChanged := [toRotateTabImages]*AValue <> [toRotateTabImages]*FTabOptions;
+  tabChanged := ([toRotateTabImages]*AValue <> [toRotateTabImages]*FTabOptions) or
+                ([toRotateAddImage]*AValue <> [toRotateAddImage]*FTabOptions);
   FTabOptions := AValue;
   FLayoutDirty := True;
+
   // toActiveBold/Italic affects text measurements, reset all caches
   for i := 0 to FTabs.Count - 1 do
   begin
     FTabs[i].FTextWidth := -1;
     FTabs[i].FTextHeight := -1;
   end;
+
   if tabChanged then
-  begin
     PrepareInternalTabImages(GetRotationForPosition);
-  end;
+
   AnchorButtons;
   UpdateTabSizeForImages;
   Invalidate;
@@ -3945,11 +3947,10 @@ begin
     exit;
 
   if IsVertical then
-  begin
-    // Vertical layout
+  begin // Vertical layout
     SetLength(bmp, FImages.ResolutionCount);
     SetLength(widths, FImages.ResolutionCount);
-    for i := 0 to FImages.ResolutionCount-1 do
+    for i := 0 to FImages.ResolutionCount - 1 do
     begin
       bmp[i] := TBitmap.Create;
       widths[i] := FImages.ResolutionByIndex[i].Width;
