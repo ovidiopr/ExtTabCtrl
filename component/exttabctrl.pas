@@ -3870,11 +3870,11 @@ begin
   CX := ASize div 2;
   CY := ASize div 2;
 
-  // Set up clean transparency using an off-white mask color
-  // This eliminates anti-aliasing artifacts (like red/pink fringes)
+  // Transparency color similar to border color
+  // This eliminates anti-aliasing artifacts
   ABmp.Transparent := True;
-  ABmp.TransparentColor := $FEFEFE;
-  C.Brush.Color := $FEFEFE;
+  ABmp.TransparentColor := $9F4421;
+  C.Brush.Color := $9F4421;
   C.Brush.Style := bsSolid;
   C.FillRect(Rect(0, 0, ASize, ASize));
 
@@ -3932,10 +3932,11 @@ begin
   CX := ASize div 2;
   CY := ASize div 2;
 
-  // Set up clean transparency using an off-white mask color
+  // Transparency color similar to border color
+  // This eliminates anti-aliasing artifacts
   ABmp.Transparent := True;
-  ABmp.TransparentColor := $FEFEFE;
-  C.Brush.Color := $FEFEFE;
+  ABmp.TransparentColor := $156F21;
+  C.Brush.Color := $156F21;
   C.Brush.Style := bsSolid;
   C.FillRect(Rect(0, 0, ASize, ASize));
 
