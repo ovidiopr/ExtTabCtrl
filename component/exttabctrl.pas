@@ -3380,19 +3380,19 @@ begin
 
   if Assigned(FBtnAdd) then
   begin
-    FBtnAdd.ShowHint := Self.ShowHint;
+    FBtnAdd.ShowHint := ShowHint and (FButtonHints.AddHint <> '');
     FBtnAdd.Hint := FButtonHints.AddHint;
   end;
 
   if Assigned(FBtnScrollPrev) then
   begin
-    FBtnScrollPrev.ShowHint := ShowHint;
+    FBtnScrollPrev.ShowHint := ShowHint and (FButtonHints.ScrollPrevHint <> '');
     FBtnScrollPrev.Hint := FButtonHints.ScrollPrevHint;
   end;
 
   if Assigned(FBtnScrollNext) then
   begin
-    FBtnScrollNext.ShowHint := ShowHint;
+    FBtnScrollNext.ShowHint := ShowHint and (FButtonHints.ScrollNextHint <> '');
     FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
   end;
 
