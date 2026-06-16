@@ -3054,10 +3054,18 @@ var
   Idx: Integer;
   V, R, CR: TRect;
 begin
-  if csDesigning in ComponentState then
+  if (csDesigning in ComponentState) and (Button in [mbLeft, mbRight]) then
   begin
+    // Force the Object Inspector to instantly select this component
+    {$IFDEF LCLDesign}
+    if Assigned(GlobalDesignHook) then
+      GlobalDesignHook.SelectOnlyThis(Self);
+    {$ENDIF}
+
     if Button = mbLeft then
     begin
+      // Child TSpeedButtons don't receive clicks at design time because the
+      // designer intercepts them
       if FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
       begin
         ScrollPrev(nil);
@@ -3068,16 +3076,19 @@ begin
         ScrollNext(nil);
         Exit;
       end;
+    end;
 
-      Idx := TabAtPos(X, Y);
-      if Idx <> -1 then
-      begin
-        SetDesignTabIndex(Idx);
-        {$IFDEF LCLDesign}
-        if Assigned(GlobalDesignHook) then
-          GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
-        {$ENDIF}
-      end;
+    // Switch tabs if a specific tab item was clicked
+    Idx := TabAtPos(X, Y);
+    if Idx <> -1 then
+    begin
+      SetDesignTabIndex(Idx);
+
+      // Load the selected tab into the property editor on click
+      {$IFDEF LCLDesign}
+      if (Button = mbLeft) and Assigned(GlobalDesignHook) then
+        GlobalDesignHook.SelectOnlyThis(Tabs[Idx]);
+      {$ENDIF}
     end;
 
     Exit; // Bypass runtime mouse tracking actions
