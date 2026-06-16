@@ -326,14 +326,13 @@ type
 
     procedure WMLMGetDlgCode(var Message: TLMessage); message LM_GETDLGCODE;
     procedure CMDesignHitTest(var Message: TLMessage); message CM_DESIGNHITTEST;
+    procedure CMShowHintChanged(var Message: TLMessage); message CM_SHOWHINTCHANGED;
+    procedure CMFontChanged(var Message: TLMessage); message CM_FONTCHANGED;
 
     procedure CreateWnd; override;
     procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: Integer; WithImplicitConstraints: Boolean); override;
-    procedure CMShowHintChanged(var Message: TLMessage); message CM_SHOWHINTCHANGED;
-    procedure CMFontChanged(var Message: TLMessage); message CM_FONTCHANGED;
-    procedure CMColorChanged(var Message: TLMessage); message CM_COLORCHANGED;
 
     procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy; const AXProportion, AYProportion: Double); override;
     procedure PrepareInternalTabImages(ARotation: Integer);
@@ -446,44 +445,6 @@ begin
   Result := ColorToGray(txtClr) > ColorToGray(bkClr);
 end;
 
-procedure RotateBitmap(Source, Dest: TCustomBitmap; Degrees: Integer);
-var
-  SrcIntf, DestIntf: TLazIntfImage;
-  x, y: Integer;
-begin
-  if Source.Empty then Exit;
-  SrcIntf := Source.CreateIntfImage;
-  DestIntf := TLazIntfImage.Create(0, 0);
-  try
-    DestIntf.DataDescription := SrcIntf.DataDescription;
-    if (Degrees = 90) or (Degrees = 270) then
-      DestIntf.SetSize(SrcIntf.Height, SrcIntf.Width)
-    else
-      DestIntf.SetSize(SrcIntf.Width, SrcIntf.Height);
-
-    case Degrees of
-      90: // 90° CCW: src(x,y) --> dest(Height-1-y, x)
-        for y := 0 to SrcIntf.Height - 1 do
-          for x := 0 to SrcIntf.Width - 1 do
-            DestIntf.Colors[SrcIntf.Height - 1 - y, x] := SrcIntf.Colors[x, y];
-      180:
-        for y := 0 to SrcIntf.Height - 1 do
-          for x := 0 to SrcIntf.Width - 1 do
-            DestIntf.Colors[SrcIntf.Width - 1 - x, SrcIntf.Height - 1 - y] := SrcIntf.Colors[x, y];
-      270: // 270° CCW: src(x,y) --> dest(y, Width-1-x)
-        for y := 0 to SrcIntf.Height - 1 do
-          for x := 0 to SrcIntf.Width - 1 do
-            DestIntf.Colors[y, SrcIntf.Width - 1 - x] := SrcIntf.Colors[x, y];
-    else
-      DestIntf.Assign(SrcIntf);
-    end;
-    Dest.LoadFromIntfImage(DestIntf);
-  finally
-    SrcIntf.Free;
-    DestIntf.Free;
-  end;
-end;
-
 // Degrees are counter-clockwise
 procedure RotateImage(Img: TCustomBitmap; Degrees: Integer);
 var
@@ -521,52 +482,6 @@ begin
     SrcIntf.Free;
     DestIntf.Free;
   end;
-end;
-
-procedure RecolorImage(Img: TCustomBitmap; AColor: TColor);
-var
-  intfImg: TLazIntfImage;
-  x, y: Integer;
-  clr, tmpClr: TFPColor;
-begin
-  if Img = nil then
-    exit;
-
-  clr := TColorToFPColor(ColorToRGB(AColor));
-  intfImg := Img.CreateIntfImage;
-  try
-    intfImg.BeginUpdate;
-    try
-      for y := 0 to intfImg.Height - 1 do
-        for x := 0 to intfImg.Width - 1 do
-        begin
-          tmpClr := intfImg.Colors[x, y];
-          if tmpClr.Alpha > 0 then
-          begin
-            tmpClr.Red := clr.Red;
-            tmpClr.Green := clr.Green;
-            tmpClr.Blue := clr.Blue;
-            intfImg.Colors[x, y] := tmpClr;
-          end;
-        end;
-    finally
-      intfImg.EndUpdate;
-    end;
-    img.LoadFromIntfImage(intfImg);
-  finally
-    intfImg.Free;
-  end;
-end;
-
-function GetScalePercent: Integer;
-begin
-  if ScreenInfo.PixelsPerInchX <= 120 then
-    Result := 100 // 100-125% (96-120 DPI): no scaling
-  else
-  if ScreenInfo.PixelsPerInchX <= 168 then
-    Result := 150 // 126%-175% (144-168 DPI): 150% scaling
-  else
-    Result := Round(ScreenInfo.PixelsPerInchX/96)*100; // 200, 300, 400, ...
 end;
 
 // Vector icon helpers
@@ -3633,15 +3548,6 @@ begin
   // Rebuild the internal button glyphs
   UpdateBtnImages;
   UpdateImages;
-end;
-
-procedure TExtTabCtrl.CMColorChanged(var Message: TLMessage);
-begin
-  inherited;
-
-  // The system color palette has changed
-  UpdateBtnImages;
-  Invalidate;
 end;
 
 procedure TExtTabCtrl.UpdateImages;
