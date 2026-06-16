@@ -614,11 +614,19 @@ begin
     end;
   end;
 
-  // Single-pass rendering: dark blue border, light blue fill
-  ACanvas.Pen.Color := $009E4320;
+  if IsDarkMode then
+  begin
+    ACanvas.Pen.Color   := $00F79A6D;   // light blue border
+    ACanvas.Brush.Color := $009E4320;   // dark blue fill
+  end
+  else
+  begin
+    ACanvas.Pen.Color   := $009E4320;   // dark blue border
+    ACanvas.Brush.Color := $00F79A6D;   // light blue fill
+  end;
+
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
-  ACanvas.Brush.Color := $00F79A6D;
   ACanvas.Brush.Style := bsSolid;
 
   ACanvas.Polygon(P);
@@ -654,10 +662,20 @@ begin
   P[11] := Point(CX - W, CY - W); // Inner corner top-left
 
   // Dark green border and light green fill applied seamlessly in one pass
-  ACanvas.Pen.Color := $00146E20;
+
+  if IsDarkMode then
+  begin
+    ACanvas.Pen.Color   := $005CD66A;   // light green border
+    ACanvas.Brush.Color := $00146E20;   // dark green fill
+  end
+  else
+  begin
+    ACanvas.Pen.Color   := $00146E20;   // dark green border
+    ACanvas.Brush.Color := $005CD66A;   // light green fill
+  end;
+
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
-  ACanvas.Brush.Color := $005CD66A;
   ACanvas.Brush.Style := bsSolid;
 
   ACanvas.Polygon(P);
