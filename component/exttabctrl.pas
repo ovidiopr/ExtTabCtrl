@@ -2654,14 +2654,14 @@ end;
 function TExtTabCtrl.TabBorderColor: TColor;
 begin
   if IsDarkMode then
-    Result := BlendColors(clBtnShadow, clWhite, 0.65)  // lighten in dark mode
+    Result := BlendColors(clBtnShadow, clWhite, 0.35)  // lighten in dark mode
   else
     Result := clBtnShadow;
 end;
 
 function TExtTabCtrl.InactiveFontColor: TColor;
 begin
-  Result := BlendColors(ResolveColor(clGrayText), ResolveColor(clWindowText), 0.65);
+  Result := BlendColors(ResolveColor(clGrayText), ResolveColor(clWindowText), 0.55);
 end;
 
 // Returns the caption as it should appear on the tab:
@@ -2702,8 +2702,6 @@ var
   ActiveR: TRect;
   StripY, StripX: Integer;
 begin
-  if (FTabStyle = tsMacOS) then Exit;
-
   ACanvas.Pen.Color := TabBorderColor;
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
@@ -2944,10 +2942,8 @@ begin
     end;
 
     // Draw the strip separator line across the full viewport edge
-    RestoreDC(Canvas.Handle, SaveIdx);
-    SaveIdx := SaveDC(Canvas.Handle);
-    DrawStripLine(Canvas, View);
-    IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
+    if (FTabStyle <> tsMacOS) then
+      DrawStripLine(Canvas, View);
 
     // Draw drop indicator (where the tab will be inserted)
     if FDragging and (FDragTargetIndex <> -1) then
