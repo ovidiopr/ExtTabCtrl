@@ -3134,7 +3134,7 @@ var
   MousePos: Integer;
   V: TRect;
   P: TPoint;
-  OldHint: String;
+  NewHint, OldHint: String;
   Msg: TLMMouse;
 begin
   if csDesigning in ComponentState then
@@ -3169,32 +3169,33 @@ begin
         FOnMouseEnterTab(Self, HoverNewTab);
 
       FHoverTab := HoverNewTab;
+      Invalidate;
+    end;
 
       if ShowHint then
       begin
-        if (HoverNewTab <> -1) then
+        // Button hover
+        if FBtnAdd.BoundsRect.Contains(Point(X, Y)) then
+          NewHint := FButtonHints.AddHint
+        else if FBtnScrollPrev.BoundsRect.Contains(Point(X, Y)) then
+          NewHint := FButtonHints.ScrollPrevHint
+        else if FBtnScrollNext.BoundsRect.Contains(Point(X, Y)) then
+          NewHint := FButtonHints.ScrollNextHint
+        else if (HoverNewTab <> -1) then  // Tab hover
         begin
           // Set hint to Tab.Hint or fallback to Tab.Text
           if FTabs[HoverNewTab].Hint <> '' then
-            Self.Hint := FTabs[HoverNewTab].Hint
+            NewHint := FTabs[HoverNewTab].Hint
           else
-            Self.Hint := FTabs[HoverNewTab].Caption;
+            NewHint := FTabs[HoverNewTab].Caption;
         end
         else
-        begin
-          // Button hover fallback logic
-          if FBtnAdd.BoundsRect.Contains(Point(X, Y)) then
-            Self.Hint := FButtonHints.AddHint
-          else if FBtnScrollPrev.BoundsRect.Contains(Point(X, Y)) then
-            Self.Hint := FButtonHints.ScrollPrevHint
-          else if FBtnScrollNext.BoundsRect.Contains(Point(X, Y)) then
-            Self.Hint := FButtonHints.ScrollNextHint
-          else
-            Self.Hint := '';
-        end;
+          NewHint := '';
 
-        if (Self.Hint <> OldHint) then
+        if (NewHint <> OldHint) then
         begin
+          Self.Hint := NewHint;
+
           // On macOS/Linux, we must cancel the existing timer/window first
           Application.CancelHint;
 
@@ -3209,8 +3210,6 @@ begin
           end;
         end;
       end;
-      Invalidate;
-    end;
 
     // Close button hover
     if FHoverCloseTab <> -1 then
@@ -3351,6 +3350,7 @@ begin
 
   FHoverTab := -1;
   FHoverCloseTab := -1;
+  Hint := '';
   Invalidate;
 end;
 
