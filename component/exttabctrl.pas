@@ -278,8 +278,10 @@ type
     procedure DrawCloseButton(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; IsActive: Boolean);
     procedure DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
     procedure DrawStripLine(ACanvas: TCanvas; const View: TRect);
+
     function ResolveColor(AColor: TColor): TColor;
     function TabBorderColor: TColor;
+    function InactiveFontColor: TColor;
 
     procedure DrawTabImage(ACanvas: TCanvas; Tab: TExtTab; X, Y: Integer);
     procedure DrawRotatedText(ACanvas: TCanvas; const S: String; const R: TRect; Degrees: Integer);
@@ -2324,7 +2326,7 @@ var
   BaseClr: TColor;
 begin
   Indent := 2;
-  FontColor := IfThen(IsActive, Font.Color, clGrayText);
+  FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
 
   // Draw Background
   if IsActive then
@@ -2386,7 +2388,7 @@ var
   BaseClr, LightClr, ShadowClr, BackClr: TColor;
 begin
   Indent := 2;
-  FontColor := IfThen(IsActive, Font.Color, clGrayText);
+  FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
 
   if (Tab.Color <> clNone) then
   begin
@@ -2452,7 +2454,7 @@ var
   BaseClr: TColor;
 begin
   Indent := 4;
-  FontColor := IfThen(IsActive, Font.Color, clGrayText);
+  FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
 
   S := GetScale(3); // Angle slant amount
 
@@ -2526,7 +2528,7 @@ var
   BaseClr: TColor;
 begin
   Indent := 5;
-  FontColor := IfThen(IsActive, Font.Color, clGrayText);
+  FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
 
   Radius := GetScale(8);
 
@@ -2645,7 +2647,7 @@ var
   BaseClr: TColor;
 begin
   Indent := 6;
-  FontColor := IfThen(IsActive, clWindowText, clGrayText);
+  FontColor := IfThen(IsActive, clWindowText, InactiveFontColor);
 
   Radius := GetScale(6);
   DrawR := R;
@@ -2720,6 +2722,11 @@ begin
     Result := BlendColors(clBtnShadow, clWhite, 0.65)  // lighten in dark mode
   else
     Result := clBtnShadow;
+end;
+
+function TExtTabCtrl.InactiveFontColor: TColor;
+begin
+  Result := BlendColors(ResolveColor(clGrayText), ResolveColor(clWindowText), 0.65);
 end;
 
 // Returns the caption as it should appear on the tab:
@@ -2828,7 +2835,7 @@ begin
   TabRect := ARect;
 
   // Sensible defaults; the style procedure (or OnDrawTab) may override either.
-  FontColor := IfThen(IsActive, Font.Color, clGrayText);
+  FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
   Indent := 2;
 
   // If the user has assigned a custom draw event, use it
