@@ -154,4 +154,4 @@ You are free to use, study, modify, and redistribute it under the terms of the L
 
 See [https://www.gnu.org/licenses/lgpl-2.1.html](https://www.gnu.org/licenses/lgpl-2.1.html) for the full license text.
 
-> **Note for application developers:** The LGPL explicitly allows this component to be linked into commercial, proprietary, and closed-source applications without requiring the source code of your overall application to be disclosed, provided that modifications to the `ExtTabCtrl` library itself remain open source under the LGPL.
+> **Note for application developers:** `ExtTabCtrl` is licensed under the LGPL with the same linking exception as `Free Pascal` and `Lazarus`. This allows the component to be linked into commercial and closed-source applications without disclosing your overall application's source code. Only modifications made directly to the `ExtTabCtrl` library itself must remain open source under the LGPL.
