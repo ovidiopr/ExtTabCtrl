@@ -2912,7 +2912,8 @@ end;
 
 procedure TExtTabCtrl.Paint;
 var
-  i, SaveIdx: Integer;
+  i: Integer;
+  OrgSaveIdx, ClipSaveIdx: Integer;
   R, View, Dummy, TabRect: TRect;
   IndicatorPos: Integer;
 begin
@@ -2926,93 +2927,102 @@ begin
   CalcLayout;
 
   View := TabsViewportRect;
-  SaveIdx := SaveDC(Canvas.Handle);
+  OrgSaveIdx := SaveDC(Canvas.Handle);
   try
-    IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
+    ClipSaveIdx := SaveDC(Canvas.Handle);
+    try
+      IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
 
-    // Draw all tabs in their original places
-    for i := 0 to FTabs.Count - 1 do
-    begin
-      if not FTabs[i].Visible then Continue;
-      R := FTabs[i].FBoundRect;
-      if IsHorizontal then Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
-      else
-        Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+      // Draw all tabs in their original places
+      for i := 0 to FTabs.Count - 1 do
+      begin
+        if not FTabs[i].Visible then Continue;
+        R := FTabs[i].FBoundRect;
+        if IsHorizontal then Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
+        else
+          Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
 
-      if IntersectRect(Dummy, R, View) then
-        DrawTab(Canvas, i, R, i = FTabIndex);
+        if IntersectRect(Dummy, R, View) then
+          DrawTab(Canvas, i, R, i = FTabIndex);
+      end;
+    finally
+      RestoreDC(Canvas.Handle, ClipSaveIdx);
     end;
 
     // Draw the strip separator line across the full viewport edge
-    RestoreDC(Canvas.Handle, SaveIdx);
     DrawStripLine(Canvas, View);
-    IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
-    SaveIdx := SaveDC(Canvas.Handle);
 
-    // Draw drop indicator (where the tab will be inserted)
-    if FDragging and (FDragTargetIndex <> -1) then
-    begin
-      Canvas.Pen.Color := clHotLight;
-      Canvas.Pen.Width := 3;
+    ClipSaveIdx := SaveDC(Canvas.Handle);
+    try
+      IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
 
-      if FDragTargetIndex < FTabs.Count then
-        TabRect := FTabs[FDragTargetIndex].FBoundRect
-      else
+      // Draw drop indicator (where the tab will be inserted)
+      if FDragging and (FDragTargetIndex <> -1) then
       begin
-        // Drop at end
-        if FTabs.Count = 0 then
-          TabRect := Rect(0, 0, 0, 0)
+        Canvas.Pen.Color := clHotLight;
+        Canvas.Pen.Width := 3;
+
+        if FDragTargetIndex < FTabs.Count then
+          TabRect := FTabs[FDragTargetIndex].FBoundRect
         else
-          TabRect := FTabs[FTabs.Count - 1].FBoundRect;
+        begin
+          // Drop at end
+          if FTabs.Count = 0 then
+            TabRect := Rect(0, 0, 0, 0)
+          else
+            TabRect := FTabs[FTabs.Count - 1].FBoundRect;
+        end;
+
+        if IsHorizontal then
+        begin
+          // Calculate logical X position
+          if FDragTargetIndex = FTabs.Count then
+            IndicatorPos := TabRect.Right
+          else
+            IndicatorPos := TabRect.Left;
+
+          // Transform Logical X to Visual X: (Pos - Scroll + Offset)
+          IndicatorPos := IndicatorPos - FScrollOffset + View.Left;
+
+          Canvas.MoveTo(IndicatorPos, View.Top);
+          Canvas.LineTo(IndicatorPos, View.Bottom);
+        end
+        else
+        begin
+          // Calculate logical Y position
+          if FDragTargetIndex = FTabs.Count then
+            IndicatorPos := TabRect.Bottom
+          else
+            IndicatorPos := TabRect.Top;
+
+          // Transform Logical Y to Visual Y
+          IndicatorPos := IndicatorPos - FScrollOffset + View.Top;
+
+          Canvas.MoveTo(View.Left, IndicatorPos);
+          Canvas.LineTo(View.Right, IndicatorPos);
+        end;
+
+        Canvas.Pen.Width := 1;
       end;
 
-      if IsHorizontal then
+      if Focused and (toShowFocusRect in FTabOptions) and
+         (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
       begin
-        // Calculate logical X position
-        if FDragTargetIndex = FTabs.Count then
-          IndicatorPos := TabRect.Right
+        R := FTabs[FTabIndex].FBoundRect;
+        if IsHorizontal then
+          Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
         else
-          IndicatorPos := TabRect.Left;
-
-        // Transform Logical X to Visual X: (Pos - Scroll + Offset)
-        IndicatorPos := IndicatorPos - FScrollOffset + View.Left;
-
-        Canvas.MoveTo(IndicatorPos, View.Top);
-        Canvas.LineTo(IndicatorPos, View.Bottom);
-      end
-      else
-      begin
-        // Calculate logical Y position
-        if FDragTargetIndex = FTabs.Count then
-          IndicatorPos := TabRect.Bottom
-        else
-          IndicatorPos := TabRect.Top;
-
-        // Transform Logical Y to Visual Y
-        IndicatorPos := IndicatorPos - FScrollOffset + View.Top;
-
-        Canvas.MoveTo(View.Left, IndicatorPos);
-        Canvas.LineTo(View.Right, IndicatorPos);
+          Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+        R := GetTabTextBounds(Canvas, R, FTabs[FTabIndex]);
+        InflateRect(R, GetScale(2), GetScale(2));
+        DrawFocusRect(Canvas.Handle, R);
       end;
-
-      Canvas.Pen.Width := 1;
-    end;
-
-    if Focused and (toShowFocusRect in FTabOptions) and
-       (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
-    begin
-      R := FTabs[FTabIndex].FBoundRect;
-      if IsHorizontal then
-        Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
-      else
-        Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
-      R := GetTabTextBounds(Canvas, R, FTabs[FTabIndex]);
-      InflateRect(R, GetScale(2), GetScale(2));
-      DrawFocusRect(Canvas.Handle, R);
+    finally
+      RestoreDC(Canvas.Handle, ClipSaveIdx);
     end;
 
   finally
-    RestoreDC(Canvas.Handle, SaveIdx);
+    RestoreDC(Canvas.Handle, OrgSaveIdx);
   end;
 end;
 
