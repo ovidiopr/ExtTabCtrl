@@ -2654,7 +2654,7 @@ end;
 function TExtTabCtrl.TabBorderColor: TColor;
 begin
   if IsDarkMode then
-    Result := BlendColors(clBtnShadow, clWhite, 0.35)  // lighten in dark mode
+    Result := BlendColors(clBtnShadow, clWhite, 0.15)  // lighten in dark mode
   else
     Result := clBtnShadow;
 end;
@@ -2705,6 +2705,8 @@ begin
   ACanvas.Pen.Color := TabBorderColor;
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
+
+  if (FTabStyle = tsMacOS) then Exit;
 
   if (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
   begin
@@ -2942,8 +2944,10 @@ begin
     end;
 
     // Draw the strip separator line across the full viewport edge
-    if (FTabStyle <> tsMacOS) then
-      DrawStripLine(Canvas, View);
+    RestoreDC(Canvas.Handle, SaveIdx);
+    DrawStripLine(Canvas, View);
+    IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
+    SaveIdx := SaveDC(Canvas.Handle);
 
     // Draw drop indicator (where the tab will be inserted)
     if FDragging and (FDragTargetIndex <> -1) then
