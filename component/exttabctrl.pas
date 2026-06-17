@@ -2453,7 +2453,18 @@ begin
     ACanvas.Polyline(P);
   end
   else
+  begin
     ACanvas.Polygon(P);
+
+    // Draw the shadow line for all the inactive tabs on the side touching the body
+    ACanvas.Pen.Color := TabBorderColor;
+    case FTabPosition of
+      tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
+      tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
+      tpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
+      tpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
+    end;
+  end;
 end;
 
 procedure TExtTabCtrl.DrawChromeTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
@@ -2512,18 +2523,18 @@ begin
     ACanvas.Pen.Color := TabBorderColor;
     case FTabPosition of
       tpTop:
-        ACanvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom + Radius, Radius, Radius);
+        ACanvas.RoundRect(R.Left, R.Top, R.Right - 1, R.Bottom + Radius, Radius, Radius);
       tpBottom:
-        ACanvas.RoundRect(R.Left, R.Top - Radius, R.Right, R.Bottom, Radius, Radius);
+        ACanvas.RoundRect(R.Left, R.Top - Radius, R.Right - 1, R.Bottom, Radius, Radius);
       tpLeft:
-        ACanvas.RoundRect(R.Left, R.Top, R.Right + Radius, R.Bottom, Radius, Radius);
+        ACanvas.RoundRect(R.Left, R.Top, R.Right + Radius, R.Bottom - 1, Radius, Radius);
       tpRight:
-        ACanvas.RoundRect(R.Left - Radius, R.Top, R.Right, R.Bottom, Radius, Radius);
+        ACanvas.RoundRect(R.Left - Radius, R.Top, R.Right, R.Bottom - 1, Radius, Radius);
     end;
   end;
 
-  // Draw the shadow line for all tabs on the side touching the body
-  ACanvas.Pen.Color := TabBorderColor;
+  // Draw the shadow line for all but the active tab on the side touching the body
+  ACanvas.Pen.Color := IfThen(IsActive, BaseClr, TabBorderColor);
   case FTabPosition of
     tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
     tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
@@ -2542,36 +2553,23 @@ begin
       ACanvas.Line(R.Left + GetScale(6), R.Bottom - 1, R.Right - GetScale(6), R.Bottom - 1);
   end;
 
-  // Active Tab: Accent Line and "Open" Connection
-  if IsActive then
+  // Accent line: use Tab.Color when set, otherwise fall back to clHighlight
+  if IsActive and (Tab.StripeColor = clNone) then
   begin
-    // Erase the strip-line segment under the active tab using the active fill
-    ACanvas.Pen.Color := BaseClr;
+    ACanvas.Pen.Color := IfThen(Tab.Color <> clNone,
+      ResolveColor(Tab.Color), clHighlight);
+    ACanvas.Pen.Width := GetScale(3);
+
+    StripeBounds := R;
+    InflateRect(StripeBounds, -GetScale(5), -GetScale(5));
+
     case FTabPosition of
-      tpTop: ACanvas.Line(R.Left + 1, R.Bottom - 1, R.Right - 1, R.Bottom - 1);
-      tpBottom: ACanvas.Line(R.Left + 1, R.Top, R.Right - 1, R.Top);
-      tpLeft: ACanvas.Line(R.Right - 1, R.Top + 1, R.Right - 1, R.Bottom - 1);
-      tpRight: ACanvas.Line(R.Left, R.Top + 1, R.Left, R.Bottom - 1);
+      tpTop: ACanvas.Line(StripeBounds.Left, R.Top + 1, StripeBounds.Right, R.Top + 1);
+      tpBottom: ACanvas.Line(StripeBounds.Left, R.Bottom - 2, StripeBounds.Right, R.Bottom - 2);
+      tpLeft: ACanvas.Line(R.Left + 1, StripeBounds.Top, R.Left + 1, StripeBounds.Bottom);
+      tpRight: ACanvas.Line(R.Right - 2, StripeBounds.Top, R.Right - 2, StripeBounds.Bottom);
     end;
-
-    // Accent line: use Tab.Color when set, otherwise fall back to clHighlight
-    if (Tab.StripeColor = clNone) then
-    begin
-      ACanvas.Pen.Color := IfThen(Tab.Color <> clNone,
-        ResolveColor(Tab.Color), clHighlight);
-      ACanvas.Pen.Width := GetScale(3);
-
-      StripeBounds := R;
-      InflateRect(StripeBounds, -GetScale(5), -GetScale(5));
-
-      case FTabPosition of
-        tpTop: ACanvas.Line(StripeBounds.Left, R.Top + 1, StripeBounds.Right, R.Top + 1);
-        tpBottom: ACanvas.Line(StripeBounds.Left, R.Bottom - 2, StripeBounds.Right, R.Bottom - 2);
-        tpLeft: ACanvas.Line(R.Left + 1, StripeBounds.Top, R.Left + 1, StripeBounds.Bottom);
-        tpRight: ACanvas.Line(R.Right - 2, StripeBounds.Top, R.Right - 2, StripeBounds.Bottom);
-      end;
-      ACanvas.Pen.Width := 1;
-    end;
+    ACanvas.Pen.Width := 1;
   end;
 end;
 
@@ -2698,9 +2696,6 @@ end;
 
 // Draws the folder-tab separator line along the inner edge of the tab strip
 procedure TExtTabCtrl.DrawStripLine(ACanvas: TCanvas; const View: TRect);
-var
-  ActiveR: TRect;
-  StripY, StripX: Integer;
 begin
   ACanvas.Pen.Color := TabBorderColor;
   ACanvas.Pen.Width := 1;
@@ -2708,52 +2703,12 @@ begin
 
   if (FTabStyle = tsMacOS) then Exit;
 
-  if (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
-  begin
-    // Compute the screen rect of the active tab
-    ActiveR := FTabs[FTabIndex].FBoundRect;
-    if IsHorizontal then
-      Types.OffsetRect(ActiveR, View.Left - FScrollOffset, View.Top)
-    else
-      Types.OffsetRect(ActiveR, View.Left, View.Top - FScrollOffset);
-
-    // Draw two segments: before and after the active tab
-    case FTabPosition of
-      tpTop:
-      begin
-        StripY := View.Bottom - 1;
-        ACanvas.Line(0, StripY, ActiveR.Left, StripY);            // left segment
-        ACanvas.Line(ActiveR.Right, StripY, ClientWidth, StripY); // right segment
-      end;
-      tpBottom:
-      begin
-        StripY := View.Top;
-        ACanvas.Line(0, StripY, ActiveR.Left, StripY);
-        ACanvas.Line(ActiveR.Right, StripY, ClientWidth, StripY);
-      end;
-      tpLeft:
-      begin
-        StripX := View.Right - 1;
-        ACanvas.Line(StripX, 0, StripX, ActiveR.Top);               // top segment
-        ACanvas.Line(StripX, ActiveR.Bottom, StripX, ClientHeight); // bottom segment
-      end;
-      tpRight:
-      begin
-        StripX := View.Left;
-        ACanvas.Line(StripX, 0, StripX, ActiveR.Top);
-        ACanvas.Line(StripX, ActiveR.Bottom, StripX, ClientHeight);
-      end;
-    end;
-  end
-  else
-  begin
-    // No active tab: draw the full unbroken line
-    case FTabPosition of
-      tpTop: ACanvas.Line(0, View.Bottom - 1, ClientWidth, View.Bottom - 1);
-      tpBottom: ACanvas.Line(0, View.Top, ClientWidth, View.Top);
-      tpLeft: ACanvas.Line(View.Right - 1, 0, View.Right - 1, ClientHeight);
-      tpRight: ACanvas.Line(View.Left, 0, View.Left, ClientHeight);
-    end;
+  // Draw the full unbroken line
+  case FTabPosition of
+    tpTop: ACanvas.Line(0, View.Bottom - 1, ClientWidth, View.Bottom - 1);
+    tpBottom: ACanvas.Line(0, View.Top, ClientWidth, View.Top);
+    tpLeft: ACanvas.Line(View.Right - 1, 0, View.Right - 1, ClientHeight);
+    tpRight: ACanvas.Line(View.Left, 0, View.Left, ClientHeight);
   end;
 end;
 
@@ -2927,6 +2882,10 @@ begin
   CalcLayout;
 
   View := TabsViewportRect;
+
+  // Draw the strip separator line across the full viewport edge
+  DrawStripLine(Canvas, View);
+
   OrgSaveIdx := SaveDC(Canvas.Handle);
   try
     ClipSaveIdx := SaveDC(Canvas.Handle);
@@ -2945,16 +2904,6 @@ begin
         if IntersectRect(Dummy, R, View) then
           DrawTab(Canvas, i, R, i = FTabIndex);
       end;
-    finally
-      RestoreDC(Canvas.Handle, ClipSaveIdx);
-    end;
-
-    // Draw the strip separator line across the full viewport edge
-    DrawStripLine(Canvas, View);
-
-    ClipSaveIdx := SaveDC(Canvas.Handle);
-    try
-      IntersectClipRect(Canvas.Handle, View.Left, View.Top, View.Right, View.Bottom);
 
       // Draw drop indicator (where the tab will be inserted)
       if FDragging and (FDragTargetIndex <> -1) then
