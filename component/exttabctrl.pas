@@ -1599,7 +1599,7 @@ var
   ShowAdd: Boolean;
   NextLeft, NextTop: Integer;
   AddLeft, AddTop: Integer;
-  imgBorder: Integer;
+  imgBorder, BtnThick: Integer;
 begin
   if (csDestroying in ComponentState) or not HandleAllocated then Exit;
 
@@ -1643,6 +1643,8 @@ begin
   ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
   FBtnAdd.Visible := ShowAdd;
 
+  BtnThick := Max(1, FTabSize - 1);
+
   // *** Horizontal orientation ***
   if IsHorizontal then
   begin
@@ -1665,11 +1667,11 @@ begin
       FBtnScrollPrev.AnchorSide[akBottom].Side := asrBottom;
       FBtnScrollPrev.Anchors := [akLeft, akBottom];
     end;
-    FBtnScrollPrev.Constraints.MinHeight := FTabSize;
+    FBtnScrollPrev.Constraints.MinHeight := BtnThick;
     FBtnScrollPrev.Constraints.MinWidth := 0;
     // Due to anchoring the button is positioned automatically, no need to
     // specify Left and Top.
-    FBtnScrollPrev.SetBounds(0, 0, ScrollPrevW, FTabSize);
+    FBtnScrollPrev.SetBounds(0, 0, ScrollPrevW, BtnThick);
 
     // Add: right edge, full strip height
     if (FTabPosition = tpTop) then
@@ -1690,12 +1692,12 @@ begin
       FBtnAdd.AnchorSide[akBottom].Side := asrBottom;
       FBtnAdd.Anchors := [akRight, akBottom];
     end;
-    FBtnAdd.Constraints.MinHeight := FTabSize;
+    FBtnAdd.Constraints.MinHeight := BtnThick;
     FBtnAdd.Constraints.MinWidth := 0;
     inc(AddW, 2*imgBorder);                    // Hmmm... Sometimes there may be cases when this is not wanted
     // Due to anchoring the button is positioned automatically, no need to
     // specify Left and Top.
-    FBtnAdd.SetBounds(0, 0, AddW, FTabSize);
+    FBtnAdd.SetBounds(0, 0, AddW, BtnThick);
 
     // Scroll-Next: just left of Add, full strip height
     if (FTabPosition = tpTop) then
@@ -1710,7 +1712,7 @@ begin
       FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
       FBtnScrollNext.Anchors := [akRight, akBottom];
     end;
-    FBtnScrollNext.Constraints.MinHeight := FTabSize;
+    FBtnScrollNext.Constraints.MinHeight := BtnThick;
     FBtnScrollNext.Constraints.MinWidth := 0;
 
     if ShowAdd then
@@ -1726,7 +1728,7 @@ begin
 
     // Due to anchoring the button is positioned automatically, no need to
     // specify Left and Top.
-    FBtnScrollNext.SetBounds(0, 0, ScrollNextW, FTabSize);
+    FBtnScrollNext.SetBounds(0, 0, ScrollNextW, BtnThick);
   end
   else
   // *** Vertical orientation ***
@@ -1750,9 +1752,9 @@ begin
       FBtnScrollPrev.AnchorSide[akRight].Side := asrRight;
       FBtnScrollPrev.Anchors := [akRight, akTop];
     end;
-    FBtnScrollPrev.Constraints.MinWidth := FTabSize;
+    FBtnScrollPrev.Constraints.MinWidth := BtnThick;
     FBtnScrollPrev.Constraints.MinHeight := 0;
-    FBtnScrollPrev.SetBounds(0, 0, FTabSize, ScrollPrevH);
+    FBtnScrollPrev.SetBounds(0, 0, BtnThick, ScrollPrevH);
 
     // Add: bottom of the strip, full strip width
     if (FTabPosition = tpLeft) then
@@ -1774,8 +1776,8 @@ begin
       FBtnAdd.Anchors := [akRight, akBottom];
     end;
     FBtnAdd.Constraints.MinHeight := 0;
-    FBtnAdd.Constraints.MinWidth := FTabSize;
-    FBtnAdd.SetBounds(0, 0, FTabSize, AddH + 2*imgBorder);
+    FBtnAdd.Constraints.MinWidth := BtnThick;
+    FBtnAdd.SetBounds(0, 0, BtnThick, AddH + 2*imgBorder);
 
     // Scroll-Next: just above Add, full strip width
     if (FTabPosition = tpLeft) then
@@ -1791,7 +1793,7 @@ begin
       FBtnScrollNext.Anchors := [akRight, akBottom];
     end;
     FBtnScrollNext.Constraints.MinHeight := 0;
-    FBtnScrollNext.Constraints.MinWidth := FTabSize;
+    FBtnScrollNext.Constraints.MinWidth := BtnThick;
 
     if ShowAdd then
     begin
@@ -1804,7 +1806,7 @@ begin
       FBtnScrollNext.AnchorSide[akBottom].Side := asrBottom;
     end;
 
-    FBtnScrollNext.SetBounds(0, 0, FTabSize, ScrollNextH);
+    FBtnScrollNext.SetBounds(0, 0, BtnThick, ScrollNextH);
   end;
 
   FLayoutDirty := True;
