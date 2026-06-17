@@ -237,6 +237,7 @@ type
     procedure NormalizeState;
     procedure CancelDrag;
     procedure InvalidateTabImageCaches;
+    procedure SnapScrollOffset;
 
     procedure SetTabIndex(AValue: Integer);
     procedure SetTabSize(AValue: Integer);
@@ -1015,6 +1016,8 @@ begin
   else
     FScrollOffset := Max(0, FScrollOffset);
 
+  SnapScrollOffset;
+
   // Reset stale hover state
   if (FHoverTab >= FTabs.Count) then FHoverTab := -1;
   if (FHoverCloseTab >= FTabs.Count) then FHoverCloseTab := -1;
@@ -1035,6 +1038,74 @@ begin
     FreeAndNil(FTabs[i].FCachedTabImage);
     FTabs[i].FCachedImageRotation := -1;
   end;
+end;
+
+procedure TExtTabCtrl.SnapScrollOffset;
+var
+  i: Integer;
+  R, View: TRect;
+  VisSize, ViewEnd: Integer;
+begin
+  if (FTabs.Count = 0) or (FScrollOffset <= 0) then Exit;
+
+  View := TabsViewportRect;
+
+  for i := 0 to FTabs.Count - 1 do
+  begin
+    if not FTabs[i].Visible then Continue;
+    R := FTabs[i].FBoundRect;
+
+    if IsHorizontal then
+    begin
+      // Check Left Edge (Start of viewport)
+      if (R.Left < FScrollOffset) and (R.Right > FScrollOffset) then
+      begin
+        VisSize := R.Right - FScrollOffset;
+        // Snap to the beginning of the next tab
+        if VisSize < MinUsefulTabSize then
+          FScrollOffset := R.Right - GetScale(cTabOverlap);
+        Break; // Only one tab can straddle the left edge
+      end;
+
+      // Check Right Edge (End of viewport)
+      ViewEnd := FScrollOffset + View.Width;
+      if (R.Left < ViewEnd) and (R.Right > ViewEnd) then
+      begin
+        VisSize := ViewEnd - R.Left;
+         // Push offset back so the sliver is hidden completely
+        if VisSize < MinUsefulTabSize then
+          FScrollOffset := R.Left - View.Width;
+        Break;
+      end;
+    end
+    else
+    begin
+      // Check Top Edge (Start of viewport)
+      if (R.Top < FScrollOffset) and (R.Bottom > FScrollOffset) then
+      begin
+        VisSize := R.Bottom - FScrollOffset;
+        if VisSize < MinUsefulTabSize then
+          FScrollOffset := R.Bottom - GetScale(cTabOverlap);
+        Break;
+      end;
+
+      // Check Bottom Edge (End of viewport)
+      ViewEnd := FScrollOffset + View.Height;
+      if (R.Top < ViewEnd) and (R.Bottom > ViewEnd) then
+      begin
+        VisSize := ViewEnd - R.Top;
+        if VisSize < MinUsefulTabSize then
+          FScrollOffset := R.Top - View.Height;
+        Break;
+      end;
+    end;
+  end;
+
+  // Re-clamp the offset to ensure snapping didn't push us out of valid bounds
+  if HandleAllocated then
+    FScrollOffset := Max(0, Min(FScrollOffset, MaxScrollOffset))
+  else
+    FScrollOffset := Max(0, FScrollOffset);
 end;
 
 // Set an initial size when dropped onto a form by click
@@ -1198,6 +1269,9 @@ begin
     end;
   end;
   if FScrollOffset < 0 then FScrollOffset := 0;
+
+  SnapScrollOffset;
+
   UpdateScrollButtons;
   Invalidate;
 end;
@@ -1238,6 +1312,9 @@ begin
     end;
   end;
   FScrollOffset := Min(MaxScrollOffset, FScrollOffset);
+
+  SnapScrollOffset;
+
   UpdateScrollButtons;
   Invalidate;
 end;
@@ -1796,37 +1873,19 @@ function TExtTabCtrl.TabAtPos(X, Y: Integer): Integer;
 var
   i: Integer;
   P: TPoint;
-  R, V, Dummy: TRect;
+  View: TRect;
 begin
   Result := -1;
-  V := TabsViewportRect;
-  if not PtInRect(V, Point(X, Y)) then Exit;
+  View := TabsViewportRect;
+  if not PtInRect(View, Point(X, Y)) then Exit;
   if IsHorizontal then
-    P := Point(X - V.Left + FScrollOffset, Y - V.Top)
+    P := Point(X - View.Left + FScrollOffset, Y - View.Top)
   else
-    P := Point(X - V.Left, Y - V.Top + FScrollOffset);
+    P := Point(X - View.Left, Y - View.Top + FScrollOffset);
 
   for i := 0 to FTabs.Count - 1 do
-  begin
-    R := FTabs[i].FBoundRect;
-
-    if PtInRect(R, P) then
-    begin
-      if IsHorizontal then
-        Types.OffsetRect(R, V.Left - FScrollOffset, V.Top)
-      else
-        Types.OffsetRect(R, V.Left, V.Top - FScrollOffset);
-
-      if IntersectRect(Dummy, R, V) then
-      begin
-        // Filter out tiny or scrolled out tabs using the exact same Paint threshold
-        if IsHorizontal and (Dummy.Width < MinUsefulTabSize) then Continue;
-        if Isvertical and (Dummy.Height < MinUsefulTabSize) then Continue;
-
+    if PtInRect(FTabs[i].FBoundRect, P) then
         Exit(i);
-      end;
-    end;
-  end;
 end;
 
 function TExtTabCtrl.MaxScrollOffset: Integer;
@@ -1883,6 +1942,8 @@ begin
 
   // Final safety bounds: clamp BEFORE UpdateScrollButtons uses the value
   if FScrollOffset < 0 then FScrollOffset := 0;
+
+  SnapScrollOffset;
 
   UpdateScrollButtons;
   Invalidate;
@@ -2931,16 +2992,7 @@ begin
           Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
 
         if IntersectRect(Dummy, R, View) then
-        begin
-          // Prevent drawing visual artifacts (like an isolated close button)
-          // when only a tiny sliver of the tab is currently scrolled into view
-          if IsHorizontal and (Dummy.Width < MinUsefulTabSize) then
-            Continue;
-          if IsVertical and (Dummy.Height < MinUsefulTabSize) then
-            Continue;
-
           DrawTab(Canvas, i, R, i = FTabIndex);
-        end;
       end;
 
       // Draw drop indicator (where the tab will be inserted)
