@@ -2422,26 +2422,26 @@ begin
     tpTop: begin
       P[0] := Point(R.Left, R.Bottom);
       P[1] := Point(R.Left + S, R.Top);
-      P[2] := Point(R.Right - S, R.Top);
-      P[3] := Point(R.Right, R.Bottom);
+      P[2] := Point(R.Right - 1 - S, R.Top);
+      P[3] := Point(R.Right - 1, R.Bottom);
     end;
     tpBottom: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Left + S, R.Bottom - 1);
-      P[2] := Point(R.Right - S, R.Bottom - 1);
-      P[3] := Point(R.Right, R.Top);
+      P[2] := Point(R.Right - 1 - S, R.Bottom - 1);
+      P[3] := Point(R.Right - 1, R.Top);
     end;
     tpLeft: begin
       P[0] := Point(R.Right, R.Top);
       P[1] := Point(R.Left, R.Top + S);
-      P[2] := Point(R.Left, R.Bottom - S);
-      P[3] := Point(R.Right, R.Bottom);
+      P[2] := Point(R.Left, R.Bottom - 1 - S);
+      P[3] := Point(R.Right, R.Bottom - 1);
     end;
     tpRight: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Right - 1, R.Top + S);
-      P[2] := Point(R.Right - 1, R.Bottom - S);
-      P[3] := Point(R.Left, R.Bottom);
+      P[2] := Point(R.Right - 1, R.Bottom - 1 - S);
+      P[3] := Point(R.Left, R.Bottom - 1);
     end;
   end;
 
