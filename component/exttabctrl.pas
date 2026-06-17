@@ -534,12 +534,12 @@ begin
 
   if IsDarkMode then
   begin
-    ACanvas.Pen.Color   := $00F79A6D;   // light blue border
+    ACanvas.Pen.Color := $00F79A6D;     // light blue border
     ACanvas.Brush.Color := $009E4320;   // dark blue fill
   end
   else
   begin
-    ACanvas.Pen.Color   := $009E4320;   // dark blue border
+    ACanvas.Pen.Color := $009E4320;     // dark blue border
     ACanvas.Brush.Color := $00F79A6D;   // light blue fill
   end;
 
@@ -566,16 +566,16 @@ begin
   W := Max(2, ASize div 7);
 
   // Plot out a thick, symmetrical 12-pointed cross clockwise
-  P[0]  := Point(CX - W, CY - L); // Top arm, top-left
-  P[1]  := Point(CX + W, CY - L); // Top arm, top-right
-  P[2]  := Point(CX + W, CY - W); // Inner corner top-right
-  P[3]  := Point(CX + L, CY - W); // Right arm, top-left
-  P[4]  := Point(CX + L, CY + W); // Right arm, bottom-left
-  P[5]  := Point(CX + W, CY + W); // Inner corner bottom-right
-  P[6]  := Point(CX + W, CY + L); // Bottom arm, bottom-right
-  P[7]  := Point(CX - W, CY + L); // Bottom arm, bottom-left
-  P[8]  := Point(CX - W, CY + W); // Inner corner bottom-left
-  P[9]  := Point(CX - L, CY + W); // Left arm, bottom-right
+  P[0] := Point(CX - W, CY - L);  // Top arm, top-left
+  P[1] := Point(CX + W, CY - L);  // Top arm, top-right
+  P[2] := Point(CX + W, CY - W);  // Inner corner top-right
+  P[3] := Point(CX + L, CY - W);  // Right arm, top-left
+  P[4] := Point(CX + L, CY + W);  // Right arm, bottom-left
+  P[5] := Point(CX + W, CY + W);  // Inner corner bottom-right
+  P[6] := Point(CX + W, CY + L);  // Bottom arm, bottom-right
+  P[7] := Point(CX - W, CY + L);  // Bottom arm, bottom-left
+  P[8] := Point(CX - W, CY + W);  // Inner corner bottom-left
+  P[9] := Point(CX - L, CY + W);  // Left arm, bottom-right
   P[10] := Point(CX - L, CY - W); // Left arm, top-right
   P[11] := Point(CX - W, CY - W); // Inner corner top-left
 
@@ -583,12 +583,12 @@ begin
 
   if IsDarkMode then
   begin
-    ACanvas.Pen.Color   := $005CD66A;   // light green border
+    ACanvas.Pen.Color := $005CD66A;     // light green border
     ACanvas.Brush.Color := $00146E20;   // dark green fill
   end
   else
   begin
-    ACanvas.Pen.Color   := $00146E20;   // dark green border
+    ACanvas.Pen.Color := $00146E20;     // dark green border
     ACanvas.Brush.Color := $005CD66A;   // light green fill
   end;
 
@@ -1405,7 +1405,7 @@ begin
   // Display text may change length — bust all text-width caches
   for i := 0 to FTabs.Count - 1 do
   begin
-    FTabs[i].FTextWidth  := -1;
+    FTabs[i].FTextWidth := -1;
     FTabs[i].FTextHeight := -1;
   end;
   InvalidateLayout;
@@ -1420,7 +1420,7 @@ begin
   FMaxCaptionLen := AValue;
   for i := 0 to FTabs.Count - 1 do
   begin
-    FTabs[i].FTextWidth  := -1;
+    FTabs[i].FTextWidth := -1;
     FTabs[i].FTextHeight := -1;
   end;
   InvalidateLayout;
@@ -2831,7 +2831,7 @@ begin
     // Use cached text width and height; measure only when stale
     if FTabs[i].FTextWidth < 0 then
     begin
-      FTabs[i].FTextWidth  := Canvas.TextWidth(GetDisplayCaption(FTabs[i]));
+      FTabs[i].FTextWidth := Canvas.TextWidth(GetDisplayCaption(FTabs[i]));
       FTabs[i].FTextHeight := Canvas.TextHeight(GetDisplayCaption(FTabs[i]));
     end;
     TxtExtent := FTabs[i].FTextWidth;
