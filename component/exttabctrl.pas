@@ -1603,7 +1603,7 @@ begin
       NeedsSpacing := True;
     end;
 
-    // ScrollNext appears only when tabs genuinely overflow this baseline.
+    // ScrollNext appears only when tabs genuinely overflow this baseline
     if (FTotalTabsSize > Result.Width) or (csDesigning in ComponentState) then
     begin
       Dec(Result.Right, FBtnScrollNext.Width);
@@ -1612,7 +1612,7 @@ begin
 
     if NeedsSpacing then Dec(Result.Right, Spacing);
 
-    // ScrollPrev appears whenever we have scrolled away from the start.
+    // ScrollPrev appears whenever we have scrolled away from the start
     if (FScrollOffset > 0) or (csDesigning in ComponentState) then
       Inc(Result.Left, FBtnScrollPrev.Width + Spacing);
   end
@@ -1630,7 +1630,7 @@ begin
       NeedsSpacing := True;
     end;
 
-    if NeedsSpacing then Dec(Result.Right, Spacing);
+    if NeedsSpacing then Dec(Result.Bottom, Spacing);
 
     if (FScrollOffset > 0) or (csDesigning in ComponentState) then
       Inc(Result.Top, FBtnScrollPrev.Height + Spacing);
