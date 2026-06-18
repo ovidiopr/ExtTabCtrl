@@ -2154,21 +2154,16 @@ begin
     TextSize := ACanvas.TextExtent(GetDisplayCaption(Tab));
 
   Result := R;
+  TxtRect := R;
+  InflateRect(TxtRect, -Indent, -Indent);
+
+  CloseW := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal);
 
   if IsHorizontal then
   begin
-    CloseW := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, True);
-
-    TxtRect := R;
-    TxtRect.Left := R.Left + Indent;
-
-    Dec(TxtRect.Right, Indent);
-
     // Account for Image
     if HasAnyImage(Tab) then
-      Inc(TxtRect.Left, GetTabImageWidth(Tab) + Spacing)
-    else
-      Inc(TxtRect.Left, Indent);
+      Inc(TxtRect.Left, GetTabImageWidth(Tab) + Spacing);
 
     // Account for Close Button
     if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
@@ -2181,12 +2176,6 @@ begin
   end
   else
   begin
-    // Mirroring DrawVerticalTab logic
-    CloseH := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, False);
-
-    TxtRect := R;
-    InflateRect(TxtRect, -Indent, -Indent);
-
     if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
     begin
       if FTabPosition = tpLeft then
@@ -2912,10 +2901,9 @@ begin
     TabLen := Padding + TxtExtent + ImgExtent + CloseExtent;
 
     if IsHorizontal then
-      FTabs[i].FBoundRect := Rect(Pos, 0, Pos + TabLen, FTabSize) //GetScale(FTabSize))
+      FTabs[i].FBoundRect := Rect(Pos, 0, Pos + TabLen, FTabSize)
     else
       FTabs[i].FBoundRect := Rect(0, Pos, FTabSize, Pos + TabLen);
-      //FTabs[i].FBoundRect := Rect(0, Pos, GetScale(FTabSize), Pos + TabLen);
 
     Pos := Pos + TabLen - GetScale(cTabOverlap);
   end;
