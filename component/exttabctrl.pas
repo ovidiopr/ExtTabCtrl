@@ -1057,46 +1057,48 @@ procedure TExtTabCtrl.SnapScrollOffset;
 var
   i: Integer;
   R, View: TRect;
-  VisSize, ViewEnd: Integer;
+  VisSize, ViewEnd, ViewSize: Integer;
 begin
-  if (FTabs.Count = 0) or (FScrollOffset <= 0) then Exit;
+  if FTabs.Count = 0 then Exit;
 
   View := TabsViewportRect;
 
   if IsHorizontal then
   begin
-    ViewEnd := FScrollOffset + View.Width;
+    ViewSize := View.Width;
+    ViewEnd  := FScrollOffset + ViewSize;
+
     for i := 0 to FTabs.Count - 1 do
     begin
       if not FTabs[i].Visible then Continue;
       R := FTabs[i].FBoundRect;
 
-      // Tab straddles the left edge
       if (R.Left < FScrollOffset) and (R.Right > FScrollOffset) then
       begin
         VisSize := R.Right - FScrollOffset;
-        // Too small a sliver: snap forward to start of the tab at the right
+
         if VisSize < MinUsefulTabSize then
           FScrollOffset := R.Right - GetScale(cTabOverlap);
-        // else: enough is visible, leave offset as-is
-        Break; // at most one tab can straddle the left edge
+
+        Break;
       end;
 
-      // Tab straddles the right edge
       if (R.Left < ViewEnd) and (R.Right > ViewEnd) then
       begin
         VisSize := ViewEnd - R.Left;
-        // Too small a sliver: snap backward so this tab is fully hidden
+
         if VisSize < MinUsefulTabSize then
-          FScrollOffset := Max(0, R.Left - View.Width);
-        // else: enough is visible, leave offset as-is
-        Break; // at most one tab can straddle the right edge
+          FScrollOffset := Max(0, R.Left - ViewSize);
+
+        Break;
       end;
     end;
   end
-  else
+  else // Vertical
   begin
-    ViewEnd := FScrollOffset + View.Height;
+    ViewSize := View.Height;
+    ViewEnd  := FScrollOffset + ViewSize;
+
     for i := 0 to FTabs.Count - 1 do
     begin
       if not FTabs[i].Visible then Continue;
@@ -1114,13 +1116,12 @@ begin
       begin
         VisSize := ViewEnd - R.Top;
         if VisSize < MinUsefulTabSize then
-          FScrollOffset := Max(0, R.Top - View.Height);
+          FScrollOffset := Max(0, R.Top - ViewSize);
         Break;
       end;
     end;
   end;
 
-  // Clamp after snapping
   if HandleAllocated then
     FScrollOffset := Max(0, Min(FScrollOffset, MaxScrollOffset))
   else
@@ -1292,8 +1293,6 @@ begin
   end;
   if FScrollOffset < 0 then FScrollOffset := 0;
 
-  SnapScrollOffset;
-
   UpdateScrollButtons;
   Invalidate;
 end;
@@ -1334,8 +1333,6 @@ begin
     end;
   end;
   FScrollOffset := Min(MaxScrollOffset, FScrollOffset);
-
-  SnapScrollOffset;
 
   UpdateScrollButtons;
   Invalidate;
@@ -1854,9 +1851,9 @@ begin
   if IsHorizontal then
   begin
     // Horizontal: Positioned at the right end of the tab, vertically centered
-    Result.Left := Tab.FBoundRect.Width - CloseW - M;
+    Result.Left := Tab.FBoundRect.Width - CloseW - (M + GetScale(cTabOverlap));
     Result.Top := (Tab.FBoundRect.Height - CloseH) div 2;
-    Result.Right := Tab.FBoundRect.Width - M;
+    Result.Right := Tab.FBoundRect.Width - (M + GetScale(cTabOverlap));
     Result.Bottom := Result.Top + CloseH;
   end
   else
@@ -1874,7 +1871,7 @@ begin
     else
     begin
       // tpRight: Close button at the bottom
-      Result.Bottom := Tab.FBoundRect.Height - M;
+      Result.Bottom := Tab.FBoundRect.Height - (M + GetScale(cTabOverlap));
       Result.Top := Result.Bottom - CloseH;
     end;
   end;
@@ -1946,7 +1943,9 @@ begin
   // Re-evaluate based on updated scroll buttons
   AdjustScrollOffset(TabsViewportRect);
 
+  UpdateScrollButtons;
   SnapScrollOffset;
+  // Re-sync buttons after the snap may have moved the offset
   UpdateScrollButtons;
   Invalidate;
 end;
@@ -2136,7 +2135,7 @@ end;
 
 function TExtTabCtrl.GetTabTextBounds(ACanvas: TCanvas; const R: TRect; Tab: TExtTab): TRect;
 var
-  Indent, Spacing, CloseW, CloseH, ImgH: Integer;
+  Indent, Spacing, CloseExtend, ImgH: Integer;
   TextSize: TSize;
   TxtRect: TRect;
   CX, CY: Integer;
@@ -2157,7 +2156,7 @@ begin
   TxtRect := R;
   InflateRect(TxtRect, -Indent, -Indent);
 
-  CloseW := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal);
+  CloseExtend := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal);
 
   if IsHorizontal then
   begin
@@ -2167,7 +2166,7 @@ begin
 
     // Account for Close Button
     if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
-      Dec(TxtRect.Right, CloseW + Indent);
+      Dec(TxtRect.Right, CloseExtend + Indent);
 
     Result.Left := TxtRect.Left + (TxtRect.Width - TextSize.cx) div 2;
     Result.Right := Result.Left + TextSize.cx;
@@ -2179,9 +2178,9 @@ begin
     if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
     begin
       if FTabPosition = tpLeft then
-        Inc(TxtRect.Top, CloseH + Indent)
+        Inc(TxtRect.Top, CloseExtend + Indent)
       else
-        Dec(TxtRect.Bottom, CloseH + Indent);
+        Dec(TxtRect.Bottom, CloseExtend + Indent);
     end;
 
     CX := (TxtRect.Left + TxtRect.Right) div 2;
@@ -2836,7 +2835,7 @@ begin
 
   Canvas.Font.Assign(Font);
   Pos := 0;
-  Padding := GetScale(cContentIndent)*2;
+  Padding := GetScale(cContentIndent)*2 + GetScale(cTabOverlap);
 
   for i := 0 to FTabs.Count - 1 do
   begin
@@ -2883,18 +2882,26 @@ begin
     begin
       ImgW := FInternalImages.WidthForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
       ImgH := FInternalImages.HeightForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
-      ImgExtent := ImgW + GetScale(cImageSpacing);
+
+      if IsHorizontal then
+        ImgExtent := ImgW + GetScale(cImageSpacing)
+      else
+        ImgExtent := ImgH + GetScale(cImageSpacing);
     end
     // Fallback to the standalone TBitmap property
     else if Assigned(FTabs[i].FImage) and not FTabs[i].FImage.Empty then
     begin
       ImgW := FTabs[i].Image.Width;
       ImgH := FTabs[i].Image.Height;
-      ImgExtent := ImgW + GetScale(cImageSpacing);
+
+      if IsHorizontal then
+        ImgExtent := ImgW + GetScale(cImageSpacing)
+      else
+        ImgExtent := ImgH + GetScale(cImageSpacing);
     end;
 
     if (toShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton then
-      CloseExtent := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal)
+      CloseExtent := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal) + GetScale(cContentIndent)
     else
       CloseExtent := 0;
 
@@ -3033,6 +3040,7 @@ begin
   FLayoutDirty := True;
   if FUpdateCount = 0 then
     CalcLayout;
+
   Invalidate;
 end;
 
@@ -3625,7 +3633,7 @@ var
   ppi: Integer;
   MinStrip: Integer;
   i, ImgExtent: Integer;
-  ScrollPrevExtent, ScrollNextExtent, AddExtent, CloseExtent: Integer;
+  ScrollPrevExtent, ScrollNextExtent, AddExtent: Integer;
 begin
   if (csLoading in ComponentState) or (csDestroying in ComponentState) then
     Exit;
@@ -3638,10 +3646,6 @@ begin
   AddExtent := GetIconExtent(FButtonImageIndexes.AddIndex, FImagesWidth.AddWidth, IsVertical);
 
   MinStrip := Max(Max(ScrollPrevExtent, ScrollNextExtent), AddExtent);
-
-  // Account for the close button glyph
-  if toShowCloseButton in FTabOptions then
-    CloseExtent := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsVertical);
 
   // Account for per-tab images coming from the shared ImageList
   if Assigned(FImages) then
