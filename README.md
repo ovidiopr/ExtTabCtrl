@@ -207,8 +207,8 @@ The `Data: TObject` property is a non-owning reference. The component will **nev
 
 ![macOS Style](images/Screenshot01.png)
 ![Flat Style](images/Screenshot02.png)
-![Flat Style, with images on Tabs](images/Screenshot03.png)
-![macOS Style, with images on Tabs](images/Screenshot04.png)
+![Custom Style, with images on Tabs](images/Screenshot03.png)
+![Chrome Style, dark theme](images/Screenshot04.png)
 ![Chrome Style, coupled with a TNotebook](images/Screenshot05.png)
 
 ## License
