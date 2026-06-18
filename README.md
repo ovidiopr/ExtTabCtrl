@@ -21,9 +21,11 @@ A feature-rich custom tab control for [Lazarus](https://www.lazarus-ide.org/) / 
 - **Middle-click to close**: optional.
 - **Keyboard navigation**: arrow keys (Left/Right/Up/Down), Home, End; focus is obtained by clicking or via Tab key.
 - **Mouse-wheel navigation**: scroll through tabs with the mouse wheel.
-- **Per-tab properties**: each tab (`TExtTab`) has `Caption`, `Color` (tab background), `StripeColor` (accent stripe), `Visible`, `Hint`, `ImageIndex`, `Image` (standalone bitmap), `Value` (string), `Data` (object), and per-tab `FontOptions`.
+- **Custom tab painting**: the `OnDrawTab` event lets you fully replace the built-in style rendering for the tab background/border while the control still draws the caption, image, and close button on top.
+- **Per-tab properties**: each tab (`TExtTab`) has `Caption`, `Color` (tab background), `StripeColor` (accent stripe), `Visible`, `Hint`, `ImageIndex`, `Image` (standalone bitmap), `Value` (string), `Data` (object), `ShowCloseButton`, and per-tab `FontOptions`.
 - **Image list support**: link a `TCustomImageList` via the `Images` property; images are drawn alongside tab captions and optionally rotated for vertical tabs.
-- **Hint support**: per-tab hints, with automatic fallback to the caption; scroll and add button hints are configurable.
+- **Multi-resolution icon selection**: `ImagesWidth` lets you pick which resolution variant of a multi-resolution `ImageList` is used for each individual glyph (scroll, add, close, tab icons), useful for crisp HiDPI rendering.
+- **Hint support**: per-tab hints, with automatic fallback to the caption; scroll and add button hints are configurable via `ButtonHints`.
 - **Batch update**: `BeginUpdate`/`EndUpdate` suppress layout recalculation and repaints during bulk operations.
 - **Import from strings**: `ImportFromStrings` populates tabs from a `TStrings` instance, firing a single `OnTabCreated` event at the end rather than one per tab.
 - **Design-time editor**: right-click the component in the Lazarus IDE to add, delete, or reorder tabs.
@@ -73,8 +75,12 @@ end;
 | `TabOptions` | `TExtTabOptions` | Set of feature flags (see below) |
 | `Tabs` | `TExtTabs` | The collection of `TExtTab` items |
 | `Images` | `TCustomImageList` | Optional image list for tab icons |
-| `ButtonImages` | `TButtonImages` | Customizes specific `Images` list indices for navigation (Prev/Next) and Add buttons |
+| `ButtonImageIndexes` | `TButtonImageIndexes` | Selects specific `ImageList` indices for the scroll Prev/Next, Add, and Close buttons |
+| `ImagesWidth` | `TImagesWidth` | Selects which resolution variant of a multi-resolution `ImageList` to use for each glyph/tab icon |
 | `ButtonHints` | `TButtonHints` | Customizes hints for the Add and Scroll navigation buttons |
+| `BorderColor` | `TColor` | Color of the tab strip border / strip-line separating tabs from the page area |
+| `MinCaptionLen` | `Integer` | Minimum number of characters for a caption (the text is padded with spaces to complete this length) |
+| `MaxCaptionLen` | `Integer` | Maximum caption length before truncation (with ellipsis) is applied |
 | `AddMenu` | `TPopupMenu` | Menu shown when the Add button is clicked |
 
 ### `TExtTabOptions` flags
@@ -92,6 +98,35 @@ end;
 | `toShowFocusRect` | Draws a focus rectangle around the active tab text when focused |
 | `toActiveBold` | Renders the active tab's caption in a bold font |
 | `toActiveItalic` | Renders the active tab's caption in an italic font |
+
+### `TButtonImageIndexes` (the `ButtonImageIndexes` property)
+
+| Property | Description |
+|---|---|
+| `ScrollPrevIndex` | Index into `ImageList` used for the "scroll to previous tab" button (`-1` = use a drawn default) |
+| `ScrollNextIndex` | Index into `ImageList` used for the "scroll to next tab" button |
+| `AddIndex` | Index into `ImageList` used for the Add button |
+| `CloseIndex` | Index into `ImageList` used for the per-tab close button |
+
+### `TImagesWidth` (the `ImagesWidth` property)
+
+Each value below refers to the "Width" key of a multi-resolution `TCustomImageList` (i.e. which registered resolution to pick for that glyph):
+
+| Property | Description |
+|---|---|
+| `PrevWidth` | Resolution used for the scroll-previous button glyph |
+| `NextWidth` | Resolution used for the scroll-next button glyph |
+| `AddWidth` | Resolution used for the Add button glyph |
+| `CloseWidth` | Resolution used for the close button glyph |
+| `TabsWidth` | Resolution used for per-tab `ImageIndex` icons |
+
+### `TButtonHints` (the `ButtonHints` property)
+
+| Property | Description |
+|---|---|
+| `AddHint` | Hint text for the Add button |
+| `ScrollPrevHint` | Hint text for the scroll-previous button |
+| `ScrollNextHint` | Hint text for the scroll-next button |
 
 ---
 
@@ -111,6 +146,28 @@ end;
 | `OnTabDblClick` | Double-click on a tab |
 | `OnTabReordering` | Before a drag-reorder is applied; allows cancellation |
 | `OnTabReordered` | After a drag-reorder is complete |
+| `OnMouseEnterTab` | The mouse pointer enters the bounds of a tab |
+| `OnMouseLeaveTab` | The mouse pointer leaves the bounds of a tab |
+| `OnGetFocus` | The control receives keyboard focus |
+| `OnLostFocus` | The control loses keyboard focus |
+| `OnDrawTab` | Replaces the built-in style drawing for a tab's background/border; receives the canvas, tab rectangle, active/hover state, and `var` `FontColor`/`Indent` parameters so you can still influence how the caption and stripe line are subsequently drawn |
+
+---
+
+## Public Methods
+
+| Method | Description |
+|---|---|
+| `AddTab(const ACaption: String; AData: TObject = nil): TExtTab` | Adds a new tab, firing `OnTabCreating`/`OnTabCreated` |
+| `DeleteTab(Index: Integer)` | Removes a tab, automatically selecting a sensible replacement active tab and firing the relevant `OnTabDeleting`/`OnTabDeleted`/`OnTabChanging`/`OnTabChanged` events |
+| `ImportFromStrings(Source: TStrings; ClearExisting: Boolean = True)` | Bulk-creates tabs from a `TStrings` instance, firing a single `OnTabCreated` at the end rather than once per tab |
+| `BeginUpdate` / `EndUpdate` | Suppress layout recalculation and repaints while making several changes; call in matching pairs |
+| `IsVertical: Boolean` | Returns `True` when `TabPosition` is `tpLeft` or `tpRight` |
+| `IsHorizontal: Boolean` | Returns `True` when `TabPosition` is `tpTop` or `tpBottom` |
+| `NextVisibleTab(FromIndex: Integer): Integer` | Returns the index of the next `Visible` tab after `FromIndex`, or `-1` if none |
+| `PrevVisibleTab(FromIndex: Integer): Integer` | Returns the index of the previous `Visible` tab before `FromIndex`, or `-1` if none |
+| `InvalidateLayout` | Marks the tab layout as dirty and forces a recalculation/repaint |
+| `SetDesignTabIndex(AValue: Integer)` | Lightweight tab switch intended for design-time/component-tree use; updates `TabIndex` without firing `OnTabChanging`/`OnTabChanged` |
 
 ---
 
@@ -123,12 +180,20 @@ end;
 | `StripeColor` | `TColor` | Accent stripe color (`clNone` = no stripe) |
 | `Visible` | `Boolean` | Hide/show without deleting |
 | `Hint` | `String` | Tooltip; falls back to `Caption` if empty |
-| `ImageIndex` | `Integer` | Index into the control's `Images` list |
-| `Image` | `TBitmap` | Standalone bitmap (used when no `Images` list is set) |
+| `ImageIndex` | `Integer` | Index into the control's `ImageList` |
+| `Image` | `TBitmap` | Standalone bitmap (used when no `ImageList` is set) |
 | `Value` | `String` | Arbitrary string payload |
 | `Data` | `TObject` | Arbitrary object payload (not owned by the tab) |
 | `ShowCloseButton` | `Boolean` | Toggles the close button visibility specifically for this tab (`True` by default) |
 | `FontOptions` | `TExtFontOptions` | Per-tab font size and style overrides |
+
+### `TExtFontOptions` (the `FontOptions` property)
+
+| Property | Description |
+|---|---|
+| `FontSize` | Overrides the tab's font size; `0` means "use the control's `Font.Size`" |
+| `FontColor` | Overrides the tab's font color; `clNone` means "use the default/active color" |
+| `FontStyles` | Overrides the tab's font styles (bold, italic, etc.) |
 
 ---
 
