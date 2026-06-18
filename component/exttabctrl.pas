@@ -1549,8 +1549,12 @@ begin
 end;
 
 function TExtTabCtrl.TabsViewportRect: TRect;
+var
+  Spacing: Integer;
 begin
   Result := ClientRect;
+
+  Spacing := GetScale(cContentIndent);
 
   case FTabPosition of
     tpTop: Result.Bottom := Result.Top + FTabSize;
@@ -1559,35 +1563,33 @@ begin
     tpRight: Result.Left := Result.Right - FTabSize;
   end;
 
-  // At design time all buttons are always visible
-  if csDesigning in ComponentState then
+  if IsHorizontal then
   begin
-    if IsHorizontal then
-    begin
-      Inc(Result.Left, FBtnScrollPrev.Width);
-      Dec(Result.Right, FBtnScrollNext.Width + FBtnAdd.Width);
-    end
-    else
-    begin
-      Inc(Result.Top, FBtnScrollPrev.Height);
-      Dec(Result.Bottom, FBtnScrollNext.Height + FBtnAdd.Height);
-    end;
+    if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+      Dec(Result.Right, FBtnAdd.Width);
+
+    if (FTotalTabsSize > Result.Width) or (csDesigning in ComponentState) then
+      Dec(Result.Right, FBtnScrollNext.Width);
+
+    if (toShowAddButton in FTabOptions) or (FTotalTabsSize > Result.Width) or
+       (csDesigning in ComponentState) then Dec(Result.Right, Spacing);
+
+    if (FScrollOffset > 0) or (csDesigning in ComponentState) then
+      Inc(Result.Left, FBtnScrollPrev.Width + Spacing);
   end
-  // At runtime, only include visible buttons
   else
   begin
-    if IsHorizontal then
-    begin
-      if FBtnScrollPrev.Visible then Inc(Result.Left, FBtnScrollPrev.Width);
-      if FBtnScrollNext.Visible then Dec(Result.Right, FBtnScrollNext.Width);
-      if FBtnAdd.Visible then Dec(Result.Right, FBtnAdd.Width);
-    end
-    else
-    begin
-      if FBtnScrollPrev.Visible then Inc(Result.Top, FBtnScrollPrev.Height);
-      if FBtnScrollNext.Visible then Dec(Result.Bottom, FBtnScrollNext.Height);
-      if FBtnAdd.Visible then Dec(Result.Bottom, FBtnAdd.Height);
-    end;
+    if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+      Dec(Result.Bottom, FBtnAdd.Height);
+
+    if (FTotalTabsSize > Result.Height) or (csDesigning in ComponentState) then
+      Dec(Result.Bottom, FBtnScrollNext.Height);
+
+    if (toShowAddButton in FTabOptions) or (FTotalTabsSize > Result.Height) or
+       (csDesigning in ComponentState) then Dec(Result.Bottom, Spacing);
+
+    if (FScrollOffset > 0) or (csDesigning in ComponentState) then
+      Inc(Result.Top, FBtnScrollPrev.Height + Spacing);
   end;
 end;
 
@@ -1953,30 +1955,17 @@ end;
 
 procedure TExtTabCtrl.UpdateScrollButtons;
 var
-  Avail: Integer;
   Can: Boolean;
   NewPrevVis, NewNextVis: Boolean;
   HasChanged: Boolean;
+  View: TRect;
 begin
   if (FUpdateCount > 0) or not HandleAllocated then Exit;
 
-  // At design time all buttons are always shown, so Avail must still account
-  // for the Add button footprint even though FBtnAdd.Visible = False.
-  if IsHorizontal then
-  begin
-    Avail := ClientWidth;
-    if FBtnAdd.Visible or (csDesigning in ComponentState) then
-      Avail := Avail - FBtnAdd.Width;
-  end
-  else
-  begin
-    Avail := ClientHeight;
-    if FBtnAdd.Visible or (csDesigning in ComponentState) then
-      Avail := Avail - FBtnAdd.Height;
-  end;
+  View := TabsViewportRect;
 
-  Can := FTotalTabsSize > Avail;
-  NewPrevVis := Can and (FScrollOffset > 0);
+  Can := FTotalTabsSize > (IfThen(IsHorizontal, View.Width, View.Height));
+  NewPrevVis := FScrollOffset > 0;
   NewNextVis := Can and (FScrollOffset < MaxScrollOffset);
 
   HasChanged := (FBtnScrollPrev.Visible <> NewPrevVis) or
