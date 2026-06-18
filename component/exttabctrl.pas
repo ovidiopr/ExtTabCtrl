@@ -1063,37 +1063,45 @@ begin
 
   View := TabsViewportRect;
 
-  for i := 0 to FTabs.Count - 1 do
+  if IsHorizontal then
   begin
-    if not FTabs[i].Visible then Continue;
-    R := FTabs[i].FBoundRect;
-
-    if IsHorizontal then
+    ViewEnd := FScrollOffset + View.Width;
+    for i := 0 to FTabs.Count - 1 do
     begin
-      // Check Left Edge (Start of viewport)
+      if not FTabs[i].Visible then Continue;
+      R := FTabs[i].FBoundRect;
+
+      // Tab straddles the left edge
       if (R.Left < FScrollOffset) and (R.Right > FScrollOffset) then
       begin
         VisSize := R.Right - FScrollOffset;
-        // Snap to the beginning of the next tab
+        // Too small a sliver: snap forward to start of the tab at the right
         if VisSize < MinUsefulTabSize then
           FScrollOffset := R.Right - GetScale(cTabOverlap);
-        Break; // Only one tab can straddle the left edge
+        // else: enough is visible, leave offset as-is
+        Break; // at most one tab can straddle the left edge
       end;
 
-      // Check Right Edge (End of viewport)
-      ViewEnd := FScrollOffset + View.Width;
+      // Tab straddles the right edge
       if (R.Left < ViewEnd) and (R.Right > ViewEnd) then
       begin
         VisSize := ViewEnd - R.Left;
-         // Push offset back so the sliver is hidden completely
+        // Too small a sliver: snap backward so this tab is fully hidden
         if VisSize < MinUsefulTabSize then
-          FScrollOffset := R.Left - View.Width;
-        Break;
+          FScrollOffset := Max(0, R.Left - View.Width);
+        // else: enough is visible, leave offset as-is
+        Break; // at most one tab can straddle the right edge
       end;
-    end
-    else
+    end;
+  end
+  else
+  begin
+    ViewEnd := FScrollOffset + View.Height;
+    for i := 0 to FTabs.Count - 1 do
     begin
-      // Check Top Edge (Start of viewport)
+      if not FTabs[i].Visible then Continue;
+      R := FTabs[i].FBoundRect;
+
       if (R.Top < FScrollOffset) and (R.Bottom > FScrollOffset) then
       begin
         VisSize := R.Bottom - FScrollOffset;
@@ -1102,19 +1110,17 @@ begin
         Break;
       end;
 
-      // Check Bottom Edge (End of viewport)
-      ViewEnd := FScrollOffset + View.Height;
       if (R.Top < ViewEnd) and (R.Bottom > ViewEnd) then
       begin
         VisSize := ViewEnd - R.Top;
         if VisSize < MinUsefulTabSize then
-          FScrollOffset := R.Top - View.Height;
+          FScrollOffset := Max(0, R.Top - View.Height);
         Break;
       end;
     end;
   end;
 
-  // Re-clamp the offset to ensure snapping didn't push us out of valid bounds
+  // Clamp after snapping
   if HandleAllocated then
     FScrollOffset := Max(0, Min(FScrollOffset, MaxScrollOffset))
   else
@@ -1428,7 +1434,6 @@ begin
     finally
       EndUpdate;
       if AutoSize then AdjustSize;
-      EnsureTabVisible(FTabIndex);
       Invalidate; // Force a full repaint of the control
     end;
   end;
