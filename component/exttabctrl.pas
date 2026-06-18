@@ -1191,6 +1191,9 @@ begin
         FTabs[AValue].FTextHeight := -1;
       end;
     end;
+
+    InvalidateLayout;
+
     FTabIndex := AValue;
     if FTabIndex <> -1 then
       EnsureTabVisible(FTabIndex);
