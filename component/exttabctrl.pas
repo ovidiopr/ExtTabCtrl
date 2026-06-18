@@ -1428,6 +1428,7 @@ begin
     finally
       EndUpdate;
       if AutoSize then AdjustSize;
+      EnsureTabVisible(FTabIndex);
       Invalidate; // Force a full repaint of the control
     end;
   end;
@@ -1947,9 +1948,7 @@ var
 begin
   if (Index < 0) or (Index >= FTabs.Count) then Exit;
 
-  // Force buttons to update state so we know exactly how much
-  // viewable space is actually "eaten" by the scroll buttons
-  UpdateScrollButtons;
+  // CalcLayout ensures FBoundRect values are current
   CalcLayout;
 
   R := FTabs[Index].FBoundRect;
@@ -1957,26 +1956,44 @@ begin
 
   if IsHorizontal then
   begin
-    // View already excludes all visible buttons and spacing on both sides,
-    // so View.Width is the exact usable tab space
     if R.Right > FScrollOffset + View.Width then
-      FScrollOffset := R.Right - View.Width
-    else if R.Left < FScrollOffset then
+      FScrollOffset := R.Right - View.Width;
+    // Re-check left: scrolling right may have been an overshoot,
+    // or the tab may simply be off to the left
+    if R.Left < FScrollOffset then
       FScrollOffset := R.Left;
   end
   else
   begin
     if R.Bottom > FScrollOffset + View.Height then
-      FScrollOffset := R.Bottom - View.Height
-    else if R.Top < FScrollOffset then
+      FScrollOffset := R.Bottom - View.Height;
+    if R.Top < FScrollOffset then
       FScrollOffset := R.Top;
   end;
 
-  // Final safety bounds: clamp BEFORE UpdateScrollButtons uses the value
+  if FScrollOffset < 0 then FScrollOffset := 0;
+
+  UpdateScrollButtons;
+  View := TabsViewportRect;
+
+  if IsHorizontal then
+  begin
+    if R.Right > FScrollOffset + View.Width then
+      FScrollOffset := R.Right - View.Width;
+    if R.Left < FScrollOffset then
+      FScrollOffset := R.Left;
+  end
+  else
+  begin
+    if R.Bottom > FScrollOffset + View.Height then
+      FScrollOffset := R.Bottom - View.Height;
+    if R.Top < FScrollOffset then
+      FScrollOffset := R.Top;
+  end;
+
   if FScrollOffset < 0 then FScrollOffset := 0;
 
   SnapScrollOffset;
-
   UpdateScrollButtons;
   Invalidate;
 end;
