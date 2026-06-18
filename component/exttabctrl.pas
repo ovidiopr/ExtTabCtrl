@@ -824,6 +824,17 @@ begin
     if not Allow then Exit;
     FVisible := AValue;
     FOwnerCtrl.FTabIndex := Candidate;
+
+    if (toActiveBold in FOwnerCtrl.FTabOptions) or (toActiveItalic in FOwnerCtrl.FTabOptions) then
+    begin
+      FOwnerCtrl.FTabs[OldIndex].FTextWidth := -1;
+      if Candidate <> -1 then
+        FOwnerCtrl.FTabs[Candidate].FTextWidth := -1;
+    end;
+
+    if Candidate <> -1 then
+      FOwnerCtrl.EnsureTabVisible(Candidate);
+
     FOwnerCtrl.InvalidateLayout;
     if Assigned(FOwnerCtrl.FOnTabChanged) then
       FOwnerCtrl.FOnTabChanged(FOwnerCtrl, Candidate);
@@ -2052,7 +2063,7 @@ procedure TExtTabCtrl.DrawTabImage(ACanvas: TCanvas; Tab: TExtTab; X, Y: Integer
 var
   bmp: TBitmap;
 begin
-  if Assigned(FImages) and (Tab.ImageIndex > -1) then
+  if HasAnyImage(Tab) then
   begin
     bmp := TBitmap.Create;
     try
@@ -2766,8 +2777,7 @@ begin
   if (FMaxCaptionLen > 0) and (Length(S) > FMaxCaptionLen) then
   begin
     // Head fills everything left after reserving tail + ellipsis
-    HeadLen := FMaxCaptionLen - TailLen - Length(EllipsisStr);
-    if HeadLen < 1 then HeadLen := 1;
+    HeadLen := Max(1, FMaxCaptionLen - TailLen - Length(EllipsisStr));
     S := Copy(S, 1, HeadLen) + EllipsisStr + Copy(S, Length(S) - TailLen + 1, TailLen);
   end;
 
@@ -3344,6 +3354,8 @@ var
   Allow: Boolean;
   Idx: Integer;
 begin
+  if csDesigning in ComponentState then Exit;
+
   if FDragging then
   begin
     // Handle Reordering
@@ -3396,6 +3408,8 @@ end;
 
 procedure TExtTabCtrl.MouseLeave;
 begin
+  inherited MouseLeave;
+
   if (FHoverTab <> -1) and Assigned(FOnMouseLeaveTab) then
     FOnMouseLeaveTab(Self, FHoverTab);
 
