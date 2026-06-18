@@ -1295,13 +1295,13 @@ end;
 procedure TExtTabCtrl.ScrollNext(Sender: TObject);
 var
   i: Integer;
-  V: TRect;
+  View: TRect;
   ViewSize, VisibleEnd: Integer;
 begin
-  V := TabsViewportRect;
+  View := TabsViewportRect;
   if IsHorizontal then
   begin
-    ViewSize := V.Width;
+    ViewSize := View.Width;
     VisibleEnd := FScrollOffset + ViewSize;
     for i := 0 to FTabs.Count - 1 do
     begin
@@ -1315,7 +1315,7 @@ begin
   end
   else
   begin
-    ViewSize := V.Height;
+    ViewSize := View.Height;
     VisibleEnd := FScrollOffset + ViewSize;
     for i := 0 to FTabs.Count - 1 do
     begin
@@ -1575,6 +1575,7 @@ end;
 function TExtTabCtrl.TabsViewportRect: TRect;
 var
   Spacing: Integer;
+  NeedsSpacing: Boolean;
 begin
   Result := ClientRect;
 
@@ -1587,30 +1588,43 @@ begin
     tpRight: Result.Left := Result.Right - FTabSize;
   end;
 
+  NeedsSpacing := False;
   if IsHorizontal then
   begin
     if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+    begin
       Dec(Result.Right, FBtnAdd.Width);
+      NeedsSpacing := True;
+    end;
 
+    // ScrollNext appears only when tabs genuinely overflow this baseline.
     if (FTotalTabsSize > Result.Width) or (csDesigning in ComponentState) then
+    begin
       Dec(Result.Right, FBtnScrollNext.Width);
+      NeedsSpacing := True;
+    end;
 
-    if (toShowAddButton in FTabOptions) or (FTotalTabsSize > Result.Width) or
-       (csDesigning in ComponentState) then Dec(Result.Right, Spacing);
+    if NeedsSpacing then Dec(Result.Right, Spacing);
 
+    // ScrollPrev appears whenever we have scrolled away from the start.
     if (FScrollOffset > 0) or (csDesigning in ComponentState) then
       Inc(Result.Left, FBtnScrollPrev.Width + Spacing);
   end
   else
   begin
     if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+    begin
       Dec(Result.Bottom, FBtnAdd.Height);
+      NeedsSpacing := True;
+    end;
 
     if (FTotalTabsSize > Result.Height) or (csDesigning in ComponentState) then
+    begin
       Dec(Result.Bottom, FBtnScrollNext.Height);
+      NeedsSpacing := True;
+    end;
 
-    if (toShowAddButton in FTabOptions) or (FTotalTabsSize > Result.Height) or
-       (csDesigning in ComponentState) then Dec(Result.Bottom, Spacing);
+    if NeedsSpacing then Dec(Result.Right, Spacing);
 
     if (FScrollOffset > 0) or (csDesigning in ComponentState) then
       Inc(Result.Top, FBtnScrollPrev.Height + Spacing);
@@ -1918,18 +1932,18 @@ end;
 
 function TExtTabCtrl.MaxScrollOffset: Integer;
 var
-  V: TRect;
+  View: TRect;
 begin
-  V := TabsViewportRect;
+  View := TabsViewportRect;
   if IsHorizontal then
-    Result := Max(0, FTotalTabsSize - V.Width)
+    Result := Max(0, FTotalTabsSize - View.Width)
   else
-    Result := Max(0, FTotalTabsSize - V.Height);
+    Result := Max(0, FTotalTabsSize - View.Height);
 end;
 
 procedure TExtTabCtrl.EnsureTabVisible(Index: Integer);
 var
-  R, V: TRect;
+  R, View: TRect;
 begin
   if (Index < 0) or (Index >= FTabs.Count) then Exit;
 
@@ -1939,33 +1953,23 @@ begin
   CalcLayout;
 
   R := FTabs[Index].FBoundRect;
-  V := TabsViewportRect;
+  View := TabsViewportRect;
 
   if IsHorizontal then
   begin
-    // Check if the tab is hidden by the 'Next' button (Right side)
-    if FBtnScrollNext.Visible and (R.Right > FScrollOffset + V.Width - FBtnScrollNext.Width) then
-      FScrollOffset := R.Right - (V.Width - FBtnScrollNext.Width)
-    // Check if the tab is hidden by the 'Previous' button (Left side)
+    // View already excludes all visible buttons and spacing on both sides,
+    // so View.Width is the exact usable tab space
+    if R.Right > FScrollOffset + View.Width then
+      FScrollOffset := R.Right - View.Width
     else if R.Left < FScrollOffset then
       FScrollOffset := R.Left;
-
-    // Final check: if the Previous button is visible, ensure it doesn't overlap R.Left
-    if FBtnScrollPrev.Visible and (R.Left < FScrollOffset + FBtnScrollPrev.Width) then
-      FScrollOffset := R.Left - FBtnScrollPrev.Width;
   end
   else
   begin
-    // Check if the tab is hidden by the 'Next' button (Bottom side)
-    if FBtnScrollNext.Visible and (R.Bottom > FScrollOffset + V.Height - FBtnScrollNext.Height) then
-      FScrollOffset := R.Bottom - (V.Height - FBtnScrollNext.Height)
-    // Check if the tab is hidden by the 'Previous' button (Top side)
+    if R.Bottom > FScrollOffset + View.Height then
+      FScrollOffset := R.Bottom - View.Height
     else if R.Top < FScrollOffset then
       FScrollOffset := R.Top;
-
-    // Final check: if the Previous button is visible, ensure it doesn't overlap R.Top
-    if FBtnScrollPrev.Visible and (R.Top < FScrollOffset + FBtnScrollPrev.Height) then
-      FScrollOffset := R.Top - FBtnScrollPrev.Height;
   end;
 
   // Final safety bounds: clamp BEFORE UpdateScrollButtons uses the value
@@ -3107,7 +3111,7 @@ end;
 procedure TExtTabCtrl.MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
   Idx: Integer;
-  V, R, CR: TRect;
+  View, R, CR: TRect;
 begin
   if (csDesigning in ComponentState) and (Button in [mbLeft, mbRight]) then
   begin
@@ -3161,14 +3165,14 @@ begin
   if (Button = mbLeft) and (toShowCloseButton in FTabOptions) and
      FTabs[Idx].ShowCloseButton then
   begin
-    V := TabsViewportRect;
+    View := TabsViewportRect;
     CR := CloseButtonRect(FTabs[Idx]);
     R := FTabs[Idx].FBoundRect;
 
     if IsHorizontal then
-      Types.OffsetRect(R, V.Left - FScrollOffset, V.Top)
+      Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
     else
-      Types.OffsetRect(R, V.Left, V.Top - FScrollOffset);
+      Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
 
     Types.OffsetRect(CR, R.Left, R.Top);
 
@@ -3198,7 +3202,7 @@ var
   i, HoverNewTab: Integer;
   TabRect: TRect;
   MousePos: Integer;
-  V: TRect;
+  View: TRect;
   P: TPoint;
   NewHint, OldHint: String;
   Msg: TLMMouse;
@@ -3216,7 +3220,7 @@ begin
   inherited MouseMove(Shift, X, Y);
 
   HoverNewTab := TabAtPos(X, Y);
-  V := TabsViewportRect;
+  View := TabsViewportRect;
 
   // Capture existing hint to detect change
   OldHint := Self.Hint;
@@ -3288,9 +3292,9 @@ begin
     begin
       TabRect := FTabs[HoverNewTab].FBoundRect;
       if IsHorizontal then
-        Types.OffsetRect(TabRect, V.Left - FScrollOffset, V.Top)
+        Types.OffsetRect(TabRect, View.Left - FScrollOffset, View.Top)
       else
-        Types.OffsetRect(TabRect, V.Left, V.Top - FScrollOffset);
+        Types.OffsetRect(TabRect, View.Left, View.Top - FScrollOffset);
 
       P := Point(X, Y);
       if PtInRect(CloseButtonRect(FTabs[HoverNewTab]), Point(P.X - TabRect.Left,
@@ -3321,9 +3325,9 @@ begin
     FDragTargetIndex := FTabs.Count;
 
     if IsHorizontal then
-      MousePos := X - V.Left + FScrollOffset
+      MousePos := X - View.Left + FScrollOffset
     else
-      MousePos := Y - V.Top + FScrollOffset;
+      MousePos := Y - View.Top + FScrollOffset;
 
     for i := 0 to FTabs.Count - 1 do
     begin
