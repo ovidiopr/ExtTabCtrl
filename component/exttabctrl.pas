@@ -197,6 +197,7 @@ type
     FButtonImageIndexes: TButtonImageIndexes;
     FButtonHints: TButtonHints;
     FImagesWidth: TImagesWidth;
+    FBorderColor: TColor;
 
     FDragging: Boolean;
     FDragIndex, FDragTargetIndex: Integer;
@@ -255,6 +256,7 @@ type
     procedure SetButtonImageIndexes(AValue: TButtonImageIndexes);
     procedure SetButtonHints(AValue: TButtonHints);
     procedure SetImagesWidth(AValue: TImagesWidth);
+    procedure SetBorderColor(AValue: TColor);
     procedure SetTabs(AValue: TExtTabs);
     procedure SetMinCaptionLen(AValue: Integer);
     procedure SetMaxCaptionLen(AValue: Integer);
@@ -284,7 +286,6 @@ type
     procedure DrawStripLine(ACanvas: TCanvas; const View: TRect);
 
     function ResolveColor(AColor: TColor): TColor;
-    function TabBorderColor: TColor;
     function InactiveFontColor: TColor;
 
     procedure DrawTabImage(ACanvas: TCanvas; Tab: TExtTab; X, Y: Integer);
@@ -382,6 +383,7 @@ type
     property ButtonImageIndexes: TButtonImageIndexes read FButtonImageIndexes write SetButtonImageIndexes;
     property ImagesWidth: TImagesWidth read FImagesWidth write SetImagesWidth;
     property ButtonHints: TButtonHints read FButtonHints write SetButtonHints;
+    property BorderColor: TColor read FBorderColor write SetBorderColor default clBtnShadow;
 
     property AddMenu: TPopupMenu read GetAddMenu write SetAddMenu;
 
@@ -1486,6 +1488,14 @@ begin
   FImagesWidth.Assign(AValue);
 end;
 
+procedure TExtTabCtrl.SetBorderColor(AValue: TColor);
+begin
+  if Avalue = FBorderColor then Exit;
+
+  FBorderColor := Avalue;
+  Invalidate;
+end;
+
 procedure TExtTabCtrl.SetMinCaptionLen(AValue: Integer);
 var
   i: Integer;
@@ -2381,7 +2391,7 @@ begin
   ACanvas.FillRect(R);
 
   // Border Logic
-  ACanvas.Pen.Color := TabBorderColor;
+  ACanvas.Pen.Color := FBorderColor;
   case FTabPosition of
     tpTop: begin
       P[0] := Point(R.Left, R.Bottom - 1);
@@ -2508,7 +2518,7 @@ begin
       ACanvas.Brush.Color := BaseClr;
   end;
 
-  ACanvas.Pen.Color := TabBorderColor;
+  ACanvas.Pen.Color := FBorderColor;
   ACanvas.Brush.Style := bsSolid;
 
   // Define Polygon Points for the tab body
@@ -2543,7 +2553,7 @@ begin
   begin
     ACanvas.Brush.Style := bsSolid;
     ACanvas.Polygon(P);
-    ACanvas.Pen.Color := TabBorderColor;
+    ACanvas.Pen.Color := FBorderColor;
     ACanvas.Polyline(P);
   end
   else
@@ -2551,7 +2561,7 @@ begin
     ACanvas.Polygon(P);
 
     // Draw the shadow line for all the inactive tabs on the side touching the body
-    ACanvas.Pen.Color := TabBorderColor;
+    ACanvas.Pen.Color := FBorderColor;
     case FTabPosition of
       tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
       tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
@@ -2614,7 +2624,7 @@ begin
   if IsActive or (Tab.Index = FHoverTab) or
      (not IsActive and (Tab.Color <> clNone)) then
   begin
-    ACanvas.Pen.Color := TabBorderColor;
+    ACanvas.Pen.Color := FBorderColor;
     case FTabPosition of
       tpTop:
         ACanvas.RoundRect(R.Left, R.Top, R.Right - 1, R.Bottom + Radius, Radius, Radius);
@@ -2628,7 +2638,7 @@ begin
   end;
 
   // Draw the shadow line for all but the active tab on the side touching the body
-  ACanvas.Pen.Color := IfThen(IsActive, BaseClr, TabBorderColor);
+  ACanvas.Pen.Color := IfThen(IsActive, BaseClr, FBorderColor);
   case FTabPosition of
     tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
     tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
@@ -2640,7 +2650,7 @@ begin
   if not IsActive and (Tab.Index <> FHoverTab) and
      (Tab.Index <> FTabIndex - 1) and (Tab.Color = clNone) then
   begin
-    ACanvas.Pen.Color := TabBorderColor;
+    ACanvas.Pen.Color := FBorderColor;
     if IsHorizontal then
       ACanvas.Line(R.Right - 1, R.Top + GetScale(6), R.Right - 1, R.Bottom - GetScale(6))
     else
@@ -2743,14 +2753,6 @@ begin
     Result := ColorToRGB(AColor);
 end;
 
-function TExtTabCtrl.TabBorderColor: TColor;
-begin
-  if IsDarkMode then
-    Result := BlendColors(clBtnShadow, clWhite, 0.15)  // lighten in dark mode
-  else
-    Result := clBtnShadow;
-end;
-
 function TExtTabCtrl.InactiveFontColor: TColor;
 begin
   Result := BlendColors(ResolveColor(clGrayText), ResolveColor(clWindowText), 0.55);
@@ -2790,7 +2792,7 @@ end;
 // Draws the folder-tab separator line along the inner edge of the tab strip
 procedure TExtTabCtrl.DrawStripLine(ACanvas: TCanvas; const View: TRect);
 begin
-  ACanvas.Pen.Color := TabBorderColor;
+  ACanvas.Pen.Color := FBorderColor;
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
 
@@ -4030,6 +4032,7 @@ begin
   FButtonHints := TButtonHints.Create;
   FImagesWidth := TImagesWidth.Create;
   FImagesWidth.OnChange := @ImagesWidthChanged;
+  FBorderColor := clBtnShadow;
 
   FBtnAdd := TSpeedButton.Create(Self);
   FBtnAdd.Name := 'BtnAdd';  // just for debugging
