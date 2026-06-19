@@ -1032,6 +1032,10 @@ begin
 
   SnapScrollOffset;
 
+  // FScrollOffset may have just changed (clamp/snap above)
+  // Resync buttons so Paint's viewport never disagrees with what's on screen
+  UpdateScrollButtons;
+
   // Reset stale hover state
   if (FHoverTab >= FTabs.Count) then FHoverTab := -1;
   if (FHoverCloseTab >= FTabs.Count) then FHoverCloseTab := -1;
