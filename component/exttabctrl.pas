@@ -1922,10 +1922,8 @@ end;
 function TExtTabCtrl.MaxScrollOffset: Integer;
 var
   View: TRect;
-  ShowAdd: Boolean;
 begin
-  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
-  View := TabsViewportRect(True, False, ShowAdd);
+  View := TabsViewportRect;
   if IsHorizontal then
     Result := Max(0, FTotalTabsSize - View.Width)
   else
@@ -1935,7 +1933,7 @@ end;
 procedure TExtTabCtrl.EnsureTabVisible(Index: Integer);
 var
   R: TRect;
-  ShowAdd: Boolean;
+  ShowPrev, ShowNext, ShowAdd: Boolean;
   ViewNoButtons, ViewNoNext, ViewNoPrev, ViewBoth: TRect;
   TabStart, TabEnd, TabExtend, TotalSize, ViewSize: Integer;
 begin
@@ -1947,6 +1945,8 @@ begin
 
   R := FTabs[Index].FBoundRect;
   ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  ShowPrev := csDesigning in ComponentState;
+  ShowNext := csDesigning in ComponentState;
   TotalSize := FTotalTabsSize;
 
   if IsHorizontal then
@@ -1962,7 +1962,7 @@ begin
   TabExtend := TabEnd - TabStart;
 
   // Step 1: does the whole strip fit with no scroll buttons at all?
-  ViewNoButtons := TabsViewportRect(False, False, ShowAdd);
+  ViewNoButtons := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
   ViewSize := IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height);
   if TotalSize <= ViewSize then
   begin
@@ -1973,7 +1973,7 @@ begin
   end;
 
   // Step 2: can we avoid ScrollPrev? (offset = 0, only ScrollNext shown)
-  ViewNoPrev := TabsViewportRect(False, True, ShowAdd);
+  ViewNoPrev := TabsViewportRect(ShowPrev, True, ShowAdd);
   ViewSize := IfThen(IsHorizontal, ViewNoPrev.Width, ViewNoPrev.Height);
   if (TabStart >= 0) and (TabEnd <= ViewSize) then
   begin
@@ -1985,7 +1985,7 @@ begin
 
   // Step 3: can we avoid ScrollNext? (rightmost tab flush with the
   // no-ScrollNext edge, only ScrollPrev shown)
-  ViewNoNext := TabsViewportRect(True, False, ShowAdd);
+  ViewNoNext := TabsViewportRect(True, ShowNext, ShowAdd);
   ViewSize := IfThen(IsHorizontal, ViewNoNext.Width, ViewNoNext.Height);
   // Offset that puts the last tab's trailing edge flush with this viewport
   if (TotalSize - ViewSize >= 0) then
@@ -2017,12 +2017,14 @@ var
   NewPrevVis, NewNextVis: Boolean;
   HasChanged: Boolean;
   ViewNoButtons: TRect;
-  ShowAdd: Boolean;
+  ShowPrev, ShowNext, ShowAdd: Boolean;
 begin
   if (FUpdateCount > 0) or not HandleAllocated then Exit;
 
   ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
-  ViewNoButtons := TabsViewportRect(False, False, ShowAdd);
+  ShowPrev := csDesigning in ComponentState;
+  ShowNext := csDesigning in ComponentState;
+  ViewNoButtons := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
   Can := FTotalTabsSize > (IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height));
 
   NewPrevVis := FScrollOffset > 0;
@@ -3003,7 +3005,7 @@ begin
 
   View := TabsViewportRect;
 
-  // Draw the strip separator line across the full viewport edge
+  // Draw the strip separator line across the full component edge
   DrawStripLine(Canvas, View);
 
   OrgSaveIdx := SaveDC(Canvas.Handle);
