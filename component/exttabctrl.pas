@@ -276,6 +276,7 @@ type
     function TabAtPos(X, Y: Integer): Integer;
     function MaxScrollOffset: Integer;
     procedure EnsureTabVisible(Index: Integer);
+    procedure ScrollTabIntoView(Index: Integer);
     procedure UpdateScrollButtons;
     function GetScale(Value: Integer): Integer;
     function MinUsefulTabSize: Integer;
@@ -836,7 +837,8 @@ begin
     end;
 
     if Candidate <> -1 then
-      FOwnerCtrl.EnsureTabVisible(Candidate);
+      //FOwnerCtrl.EnsureTabVisible(Candidate);
+      FOwnerCtrl.ScrollTabIntoView(Candidate);
 
     FOwnerCtrl.InvalidateLayout;
     if Assigned(FOwnerCtrl.FOnTabChanged) then
@@ -1210,7 +1212,8 @@ begin
 
     FTabIndex := AValue;
     if FTabIndex <> -1 then
-      EnsureTabVisible(FTabIndex);
+      //EnsureTabVisible(FTabIndex);
+      ScrollTabIntoView(FTabIndex);
   finally
     EndInternalChange;
   end;
@@ -2008,6 +2011,60 @@ begin
   FScrollOffset := Max(0, Min(FScrollOffset, TotalSize - ViewSize));
 
   UpdateScrollButtons;
+  Invalidate;
+end;
+
+// "Soft" counterpart to EnsureTabVisible: used whenever the tab strip's
+// geometry/button configuration hasn't changed but only the selection
+procedure TExtTabCtrl.ScrollTabIntoView(Index: Integer);
+var
+  R, View: TRect;
+  TabStart, TabEnd, ViewSize: Integer;
+  OldPrevVisible, OldNextVisible: Boolean;
+begin
+  if (Index < 0) or (Index >= FTabs.Count) then Exit;
+
+  // CalcLayout ensures FBoundRect/FTotalTabsSize are current for the
+  // current orientation before we measure anything
+  CalcLayout;
+
+  R := FTabs[Index].FBoundRect;
+  if IsHorizontal then
+  begin
+    TabStart := R.Left;
+    TabEnd := R.Right;
+  end
+  else
+  begin
+    TabStart := R.Top;
+    TabEnd := R.Bottom;
+  end;
+
+  // Use the current viewport rather than recomputing the optimal button configuration
+  View := TabsViewportRect;
+  ViewSize := IfThen(IsHorizontal, View.Width, View.Height);
+
+  if TabStart < FScrollOffset then
+    FScrollOffset := TabStart                  // clipped on the near edge
+  else if TabEnd > FScrollOffset + ViewSize then
+    FScrollOffset := TabEnd - ViewSize          // clipped on the far edge
+  else
+    Exit;                                       // already fully visible
+
+  FScrollOffset := Max(0, Min(FScrollOffset, MaxScrollOffset));
+
+  OldPrevVisible := FBtnScrollPrev.Visible;
+  OldNextVisible := FBtnScrollNext.Visible;
+  UpdateScrollButtons;
+
+  if (FBtnScrollPrev.Visible <> OldPrevVisible) or
+     (FBtnScrollNext.Visible <> OldNextVisible) then
+  begin
+    // The nudge changed the button layout, use the "hard" algorithm
+    EnsureTabVisible(Index);
+    Exit;
+  end;
+
   Invalidate;
 end;
 
