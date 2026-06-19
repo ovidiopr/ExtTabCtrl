@@ -3093,6 +3093,47 @@ begin
       RestoreDC(Canvas.Handle, ClipSaveIdx);
     end;
 
+    // Cocoa keeps drawing the tabs over the space reserved for buttons
+    // This is a hack to delete this, until I find the right solution
+    {$IFDEF LCLCocoa}
+    Canvas.Brush.Color := Color;
+    Canvas.Brush.Style := bsSolid;
+
+    if IsHorizontal then
+    begin
+      if FTabPosition = tpTop then
+      begin
+        if View.Left > 0 then
+          Canvas.FillRect(Rect(0, 0, View.Left, View.Bottom - 1));
+        if View.Right < ClientWidth then
+          Canvas.FillRect(Rect(View.Right, 0, ClientWidth, View.Bottom - 1));
+      end
+      else // tpBottom
+      begin
+        if View.Left > 0 then
+          Canvas.FillRect(Rect(0, View.Top + 1, View.Left, ClientHeight));
+        if View.Right < ClientWidth then
+          Canvas.FillRect(Rect(View.Right, View.Top + 1, ClientWidth, ClientHeight));
+      end;
+    end
+    else // IsVertical
+    begin
+      if FTabPosition = tpLeft then
+      begin
+        if View.Top > 0 then
+          Canvas.FillRect(Rect(0, 0, View.Right - 1, View.Top));
+        if View.Bottom < ClientHeight then
+          Canvas.FillRect(Rect(0, View.Bottom, View.Right - 1, ClientHeight));
+      end
+      else // tpRight
+      begin
+        if View.Top > 0 then
+          Canvas.FillRect(Rect(View.Left + 1, 0, ClientWidth, View.Top));
+        if View.Bottom < ClientHeight then
+          Canvas.FillRect(Rect(View.Left + 1, View.Bottom, ClientWidth, ClientHeight));
+      end;
+    end;
+    {$ENDIF}
   finally
     RestoreDC(Canvas.Handle, OrgSaveIdx);
   end;
