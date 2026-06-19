@@ -75,28 +75,37 @@ object Form1: TForm1
     OnClick = RadioGroup1Click
   end
   object cbRotateNewTabBtn: TCheckBox
+    AnchorSideTop.Control = cbShowNewTabBtn
+    AnchorSideTop.Side = asrBottom
     Left = 128
     Height = 18
-    Top = 213
+    Top = 195
     Width = 151
+    BorderSpacing.Top = 2
     Caption = 'Rotate "Add Tab" icon'
     TabOrder = 2
     OnChange = cbRotateNewTabBtnChange
   end
   object cbUseExternalImages: TCheckBox
+    AnchorSideTop.Control = cbRotateNewTabBtn
+    AnchorSideTop.Side = asrBottom
     Left = 128
     Height = 18
-    Top = 248
+    Top = 223
     Width = 151
+    BorderSpacing.Top = 10
     Caption = 'Use external imagelist'
     TabOrder = 3
     OnChange = cbUseExternalImagesChange
   end
   object cbShowNewTabBtn: TCheckBox
+    AnchorSideTop.Control = RadioGroup2
+    AnchorSideTop.Side = asrBottom
     Left = 128
     Height = 18
-    Top = 192
+    Top = 175
     Width = 158
+    BorderSpacing.Top = 10
     Caption = 'Show "Add Tab" button'
     Checked = True
     State = cbChecked
@@ -132,10 +141,13 @@ object Form1: TForm1
     OnClick = RadioGroup2Click
   end
   object cbRotateTabIcons: TCheckBox
+    AnchorSideTop.Control = cbUseExternalImages
+    AnchorSideTop.Side = asrBottom
     Left = 128
     Height = 18
-    Top = 269
+    Top = 243
     Width = 119
+    BorderSpacing.Top = 2
     Caption = 'Rotate tab icons'
     TabOrder = 6
     OnChange = cbRotateTabIconsChange

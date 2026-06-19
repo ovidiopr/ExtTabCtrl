@@ -37,12 +37,9 @@ type
     procedure CmbTabStyleChange(Sender: TObject);
     procedure ExtTabCtrl1TabChanged(Sender: TObject; NewIndex: Integer);
     procedure ExtTabCtrl1TabCreated(Sender: TObject);
-    procedure ExtTabCtrl1TabCreating(Sender: TObject; var ACaption: String;
-      var Data: TObject; var Allow: Boolean);
-    procedure ExtTabCtrl1TabDeleting(Sender: TObject; Index: Integer;
-      var Allow: Boolean);
-    procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex,
-      NewIndex: Integer);
+    procedure ExtTabCtrl1TabCreating(Sender: TObject; var ACaption: String; var Data: TObject; var Allow: Boolean);
+    procedure ExtTabCtrl1TabDeleting(Sender: TObject; Index: Integer; var Allow: Boolean);
+    procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex, NewIndex: Integer);
     procedure FormCreate(Sender: TObject);
   private
     procedure LoadImage(const AFileName: String);
