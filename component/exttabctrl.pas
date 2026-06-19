@@ -268,7 +268,8 @@ type
 
     procedure ButtonImagesChanged(Sender: TObject);
     procedure ImagesWidthChanged(Sender: TObject);
-    function TabsViewportRect: TRect;
+    function TabsViewportRect(ShowPrev, ShowNext, ShowAdd: Boolean): TRect; overload;
+    function TabsViewportRect: TRect; overload;
     procedure AnchorButtons;
     function GetDisplayCaption(Tab: TExtTab): String;
     function CloseButtonRect(Tab: TExtTab): TRect;
@@ -1431,7 +1432,11 @@ begin
     finally
       EndUpdate;
       if AutoSize then AdjustSize;
-      Invalidate; // Force a full repaint of the control
+
+      if FTabIndex >= 0 then
+        EnsureTabVisible(FTabIndex) // This forces a full repaint of the control
+      else
+        Invalidate;
     end;
   end;
 end;
@@ -1575,7 +1580,7 @@ begin
   UpdateBtnImages;
 end;
 
-function TExtTabCtrl.TabsViewportRect: TRect;
+function TExtTabCtrl.TabsViewportRect(ShowPrev, ShowNext, ShowAdd: Boolean): TRect;
 var
   Spacing: Integer;
   NeedsSpacing: Boolean;
@@ -1594,14 +1599,13 @@ begin
   NeedsSpacing := False;
   if IsHorizontal then
   begin
-    if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+    if ShowAdd then
     begin
       Dec(Result.Right, FBtnAdd.Width);
       NeedsSpacing := True;
     end;
 
-    // ScrollNext appears only when tabs genuinely overflow this baseline
-    if (FTotalTabsSize > Result.Width) or (csDesigning in ComponentState) then
+    if ShowNext then
     begin
       Dec(Result.Right, FBtnScrollNext.Width);
       NeedsSpacing := True;
@@ -1609,19 +1613,18 @@ begin
 
     if NeedsSpacing then Dec(Result.Right, Spacing);
 
-    // ScrollPrev appears whenever we have scrolled away from the start
-    if (FScrollOffset > 0) or (csDesigning in ComponentState) then
+    if ShowPrev then
       Inc(Result.Left, FBtnScrollPrev.Width + Spacing);
   end
   else
   begin
-    if (toShowAddButton in FTabOptions) or (csDesigning in ComponentState) then
+    if ShowAdd then
     begin
       Dec(Result.Bottom, FBtnAdd.Height);
       NeedsSpacing := True;
     end;
 
-    if (FTotalTabsSize > Result.Height) or (csDesigning in ComponentState) then
+    if ShowNext then
     begin
       Dec(Result.Bottom, FBtnScrollNext.Height);
       NeedsSpacing := True;
@@ -1629,9 +1632,34 @@ begin
 
     if NeedsSpacing then Dec(Result.Bottom, Spacing);
 
-    if (FScrollOffset > 0) or (csDesigning in ComponentState) then
+    if ShowPrev then
       Inc(Result.Top, FBtnScrollPrev.Height + Spacing);
   end;
+end;
+
+function TExtTabCtrl.TabsViewportRect: TRect;
+var
+  ShowPrev, ShowNext, ShowAdd: Boolean;
+  ViewNoNext: TRect;
+  AvailNoNext: Integer;
+begin
+  if csDesigning in ComponentState then
+  begin
+    ShowAdd := True;
+    ShowPrev := True;
+    ShowNext := True;
+  end
+  else
+  begin
+    ShowAdd := toShowAddButton in FTabOptions;
+    ShowPrev := FScrollOffset > 0;
+
+    ViewNoNext := TabsViewportRect(ShowPrev, False, ShowAdd);
+    AvailNoNext := IfThen(IsHorizontal, ViewNoNext.Width, ViewNoNext.Height);
+    ShowNext := FTotalTabsSize > FScrollOffset + AvailNoNext;
+  end;
+
+  Result := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
 end;
 
 // Sets Anchors on the three buttons so the LCL layout engine keeps them
@@ -1661,7 +1689,7 @@ begin
 
   BtnThick := Max(1, FTabSize - 1);
 
-  // *** Horizontal orientation ***
+  // Horizontal orientation
   if IsHorizontal then
   begin
     // Scroll-Prev: left edge, full strip height
@@ -1710,9 +1738,8 @@ begin
     end;
     FBtnAdd.Constraints.MinHeight := BtnThick;
     FBtnAdd.Constraints.MinWidth := 0;
-    inc(AddW, 2*imgBorder);                    // Hmmm... Sometimes there may be cases when this is not wanted
-    // Due to anchoring the button is positioned automatically, no need to
-    // specify Left and Top.
+    inc(AddW, 2*imgBorder);
+
     FBtnAdd.SetBounds(0, 0, AddW, BtnThick);
 
     // Scroll-Next: just left of Add, full strip height
@@ -1747,7 +1774,7 @@ begin
     FBtnScrollNext.SetBounds(0, 0, ScrollNextW, BtnThick);
   end
   else
-  // *** Vertical orientation ***
+  // Vertical orientation
   begin
     // Scroll-Prev: top of the strip, full strip width
     if (FTabPosition = tpLeft) then
@@ -1899,8 +1926,10 @@ end;
 function TExtTabCtrl.MaxScrollOffset: Integer;
 var
   View: TRect;
+  ShowAdd: Boolean;
 begin
-  View := TabsViewportRect;
+  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  View := TabsViewportRect(True, False, ShowAdd);
   if IsHorizontal then
     Result := Max(0, FTotalTabsSize - View.Width)
   else
@@ -1910,42 +1939,78 @@ end;
 procedure TExtTabCtrl.EnsureTabVisible(Index: Integer);
 var
   R: TRect;
-
-  procedure AdjustScrollOffset(const AView: TRect);
-    begin
-      if IsHorizontal then
-      begin
-        if R.Right > FScrollOffset + AView.Width then
-          FScrollOffset := R.Right - AView.Width;
-        if R.Left < FScrollOffset then
-          FScrollOffset := R.Left;
-      end
-      else
-      begin
-        if R.Bottom > FScrollOffset + AView.Height then
-          FScrollOffset := R.Bottom - AView.Height;
-        if R.Top < FScrollOffset then
-          FScrollOffset := R.Top;
-      end;
-      if FScrollOffset < 0 then FScrollOffset := 0;
-    end;
-
+  ShowAdd: Boolean;
+  ViewNoButtons, ViewNoNext, ViewNoPrev, ViewBoth: TRect;
+  TabStart, TabEnd, TabExtend, TotalSize, ViewSize: Integer;
 begin
   if (Index < 0) or (Index >= FTabs.Count) then Exit;
 
-  // CalcLayout ensures FBoundRect values are current
+  // CalcLayout ensures FBoundRect/FTotalTabsSize are current for the
+  // current orientation before we measure anything
   CalcLayout;
 
   R := FTabs[Index].FBoundRect;
+  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  TotalSize := FTotalTabsSize;
 
-  AdjustScrollOffset(TabsViewportRect);
-  UpdateScrollButtons;
-  // Re-evaluate based on updated scroll buttons
-  AdjustScrollOffset(TabsViewportRect);
+  if IsHorizontal then
+  begin
+    TabStart := R.Left;
+    TabEnd := R.Right;
+  end
+  else
+  begin
+    TabStart := R.Top;
+    TabEnd := R.Bottom;
+  end;
+  TabExtend := TabEnd - TabStart;
 
-  UpdateScrollButtons;
-  SnapScrollOffset;
-  // Re-sync buttons after the snap may have moved the offset
+  // Step 1: does the whole strip fit with no scroll buttons at all?
+  ViewNoButtons := TabsViewportRect(False, False, ShowAdd);
+  ViewSize := IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height);
+  if TotalSize <= ViewSize then
+  begin
+    FScrollOffset := 0;
+    UpdateScrollButtons;
+    Invalidate;
+    Exit;
+  end;
+
+  // Step 2: can we avoid ScrollPrev? (offset = 0, only ScrollNext shown)
+  ViewNoPrev := TabsViewportRect(False, True, ShowAdd);
+  ViewSize := IfThen(IsHorizontal, ViewNoPrev.Width, ViewNoPrev.Height);
+  if (TabStart >= 0) and (TabEnd <= ViewSize) then
+  begin
+    FScrollOffset := 0;
+    UpdateScrollButtons;
+    Invalidate;
+    Exit;
+  end;
+
+  // Step 3: can we avoid ScrollNext? (rightmost tab flush with the
+  // no-ScrollNext edge, only ScrollPrev shown)
+  ViewNoNext := TabsViewportRect(True, False, ShowAdd);
+  ViewSize := IfThen(IsHorizontal, ViewNoNext.Width, ViewNoNext.Height);
+  // Offset that puts the last tab's trailing edge flush with this viewport
+  if (TotalSize - ViewSize >= 0) then
+  begin
+    if (TabStart >= TotalSize - ViewSize) and (TabEnd <= TotalSize) then
+    begin
+      FScrollOffset := TotalSize - ViewSize;
+      UpdateScrollButtons;
+      Invalidate;
+      Exit;
+    end;
+  end;
+
+  // Step 4: neither button is avoidable (center the tab in the viewport that
+  // has both scroll buttons present)
+  ViewBoth := TabsViewportRect(True, True, ShowAdd);
+  ViewSize := IfThen(IsHorizontal, ViewBoth.Width, ViewBoth.Height);
+
+  FScrollOffset := TabStart - (ViewSize - TabExtend) div 2;
+  FScrollOffset := Max(0, Min(FScrollOffset, TotalSize - ViewSize));
+
   UpdateScrollButtons;
   Invalidate;
 end;
@@ -1955,13 +2020,15 @@ var
   Can: Boolean;
   NewPrevVis, NewNextVis: Boolean;
   HasChanged: Boolean;
-  View: TRect;
+  ViewNoButtons: TRect;
+  ShowAdd: Boolean;
 begin
   if (FUpdateCount > 0) or not HandleAllocated then Exit;
 
-  View := TabsViewportRect;
+  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  ViewNoButtons := TabsViewportRect(False, False, ShowAdd);
+  Can := FTotalTabsSize > (IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height));
 
-  Can := FTotalTabsSize > (IfThen(IsHorizontal, View.Width, View.Height));
   NewPrevVis := FScrollOffset > 0;
   NewNextVis := Can and (FScrollOffset < MaxScrollOffset);
 
