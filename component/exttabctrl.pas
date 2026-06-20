@@ -438,14 +438,9 @@ function BlendColors(C1, C2: TColor; Ratio: Single): TColor;
 var
   R1, G1, B1, R2, G2, B2: Byte;
 begin
-  C1 := ColorToRGB(C1);
-  C2 := ColorToRGB(C2);
-  R1 := GetRValue(C1);
-  G1 := GetGValue(C1);
-  B1 := GetBValue(C1);
-  R2 := GetRValue(C2);
-  G2 := GetGValue(C2);
-  B2 := GetBValue(C2);
+  C1 := ColorToRGB(C1); C2 := ColorToRGB(C2);
+  R1 := GetRValue(C1); G1 := GetGValue(C1); B1 := GetBValue(C1);
+  R2 := GetRValue(C2); G2 := GetGValue(C2); B2 := GetBValue(C2);
   Result := RGB(Round(R1*(1 - Ratio) + R2*Ratio),
                 Round(G1*(1 - Ratio) + G2*Ratio),
                 Round(B1*(1 - Ratio) + B2*Ratio));
@@ -544,19 +539,10 @@ begin
     end;
   end;
 
-  if IsDarkMode then
-  begin
-    ACanvas.Pen.Color := $00F79A6D;     // light blue border
-    ACanvas.Brush.Color := $009E4320;   // dark blue fill
-  end
-  else
-  begin
-    ACanvas.Pen.Color := $009E4320;     // dark blue border
-    ACanvas.Brush.Color := $00F79A6D;   // light blue fill
-  end;
-
+  ACanvas.Pen.Color := IfThen(IsDarkMode, $00F79A6D, $009E4320);
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
+  ACanvas.Brush.Color := IfThen(IsDarkMode, $009E4320, $00F79A6D);
   ACanvas.Brush.Style := bsSolid;
 
   ACanvas.Polygon(P);
@@ -575,7 +561,7 @@ begin
   // L = Length of the cross arms from center
   L := 2*ASize div 5;
   // W = Half-thickness of the cross arms (Total thickness will be W*2)
-  W := Max(2, ASize div 7);
+  W := Max(2, ASize div 8);
 
   // Plot out a thick, symmetrical 12-pointed cross clockwise
   P[0] := Point(CX - W, CY - L);  // Top arm, top-left
@@ -591,21 +577,10 @@ begin
   P[10] := Point(CX - L, CY - W); // Left arm, top-right
   P[11] := Point(CX - W, CY - W); // Inner corner top-left
 
-  // Dark green border and light green fill applied seamlessly in one pass
-
-  if IsDarkMode then
-  begin
-    ACanvas.Pen.Color := $005CD66A;     // light green border
-    ACanvas.Brush.Color := $00146E20;   // dark green fill
-  end
-  else
-  begin
-    ACanvas.Pen.Color := $00146E20;     // dark green border
-    ACanvas.Brush.Color := $005CD66A;   // light green fill
-  end;
-
+  ACanvas.Pen.Color := IfThen(IsDarkMode, $005CD66A, $00146E20);
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
+  ACanvas.Brush.Color := IfThen(IsDarkMode, $00146E20, $005CD66A);
   ACanvas.Brush.Style := bsSolid;
 
   ACanvas.Polygon(P);
@@ -3318,9 +3293,8 @@ begin
     TabRect := FTabs[HoverNewTab].FBoundRect;
     OffsetToView(TabRect, View);
 
-    P := Point(X, Y);
-    IsOverCloseBtn := PtInRect(CloseButtonRect(FTabs[HoverNewTab]),
-      Point(P.X - TabRect.Left, P.Y - TabRect.Top));
+    P := Point(X - TabRect.Left, Y - TabRect.Top);
+    IsOverCloseBtn := PtInRect(CloseButtonRect(FTabs[HoverNewTab]), P);
   end;
 
   if not FDragging then
