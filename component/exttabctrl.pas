@@ -78,7 +78,7 @@ type
     property AddHint: String read FAddHint write SetAddHint;
     property ScrollPrevHint: String read FScrollPrevHint write SetScrollPrevHint;
     property ScrollNextHint: String read FScrollNextHint write SetScrollNextHint;
-    property CloseHint: String read FCloseHint write FCloseHint;
+    property CloseHint: String read FCloseHint write SetCloseHint;
   end;
 
   TExtFontOptions = class(TPersistent)
@@ -3649,23 +3649,8 @@ procedure TExtTabCtrl.Loaded;
 begin
   inherited Loaded;
 
-  if Assigned(FBtnAdd) then
-  begin
-    FBtnAdd.ShowHint := ShowHint and (FButtonHints.AddHint <> '');
-    FBtnAdd.Hint := FButtonHints.AddHint;
-  end;
-
-  if Assigned(FBtnScrollPrev) then
-  begin
-    FBtnScrollPrev.ShowHint := ShowHint and (FButtonHints.ScrollPrevHint <> '');
-    FBtnScrollPrev.Hint := FButtonHints.ScrollPrevHint;
-  end;
-
-  if Assigned(FBtnScrollNext) then
-  begin
-    FBtnScrollNext.ShowHint := ShowHint and (FButtonHints.ScrollNextHint <> '');
-    FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
-  end;
+  // Sync hints
+  ButtonHintsChanged(Self);
 
   FButtonImageIndexes.Save;
 
@@ -3697,21 +3682,8 @@ procedure TExtTabCtrl.CMShowHintChanged(var Message: TLMessage);
 begin
   inherited;
 
-  if Assigned(FBtnAdd) then
-  begin
-    FBtnAdd.ShowHint := Self.ShowHint and (FButtonHints.AddHint <> '');
-    FBtnAdd.Hint := FButtonHints.AddHint;
-  end;
-  if Assigned(FBtnScrollPrev) then
-  begin
-    FBtnScrollPrev.ShowHint := Self.ShowHint and (FButtonHints.ScrollPrevHint <> '');
-    FBtnScrollPrev.Hint := FButtonHints.ScrollPrevHint;
-  end;
-  if Assigned(FBtnScrollNext) then
-  begin
-    FBtnScrollNext.ShowHint := Self.ShowHint and (FButtonHints.ScrollNextHint <> '');
-    FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
-  end;
+  // Sync hints using the central method
+  ButtonHintsChanged(Self);
 end;
 
 procedure TExtTabCtrl.CMFontChanged(var Message: TLMessage);
