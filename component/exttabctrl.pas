@@ -224,6 +224,7 @@ type
     FOnDrawTab: TTabDrawEvent;
 
     FScrollOffset: Integer;
+    FManualScroll: Boolean;
     FHoverTab, FHoverCloseTab: Integer;
     FBtnScrollPrev, FBtnScrollNext: TSpeedButton;
 
@@ -238,7 +239,6 @@ type
     procedure NormalizeState;
     procedure CancelDrag;
     procedure InvalidateTabImageCaches;
-    procedure SnapScrollOffset;
 
     procedure SetTabIndex(AValue: Integer);
     procedure SetTabSize(AValue: Integer);
@@ -275,8 +275,13 @@ type
     function CloseButtonRect(Tab: TExtTab): TRect;
     function TabAtPos(X, Y: Integer): Integer;
     function MaxScrollOffset: Integer;
+    function AxisSize(const R: TRect): Integer;
+    procedure GetAxisSpan(const R: TRect; out AStart, AEnd: Integer);
+    procedure OffsetToView(var R: TRect; const View: TRect);
+    function ViewToContent(const P: TPoint; const View: TRect): TPoint;
     procedure EnsureTabVisible(Index: Integer);
     procedure ScrollTabIntoView(Index: Integer);
+    procedure SnapScrollOffset;
     procedure UpdateScrollButtons;
     function GetScale(Value: Integer): Integer;
     function MinUsefulTabSize: Integer;
@@ -837,7 +842,6 @@ begin
     end;
 
     if Candidate <> -1 then
-      //FOwnerCtrl.EnsureTabVisible(Candidate);
       FOwnerCtrl.ScrollTabIntoView(Candidate);
 
     FOwnerCtrl.InvalidateLayout;
@@ -1009,7 +1013,11 @@ end;
 procedure TExtTabCtrl.NormalizeState;
 var
   Candidate: Integer;
+  View: TRect;
+  TabStart, TabEnd, ViewSize: Integer;
 begin
+  CalcLayout;
+
   // Clamp or fix FTabIndex
   if FTabs.Count = 0 then
     FTabIndex := -1
@@ -1034,7 +1042,16 @@ begin
 
   SnapScrollOffset;
 
-  // FScrollOffset may have just changed (clamp/snap above)
+  if HandleAllocated and not FManualScroll and
+     (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
+  begin
+    View := TabsViewportRect;
+    ViewSize := AxisSize(View);
+    GetAxisSpan(FTabs[FTabIndex].FBoundRect, TabStart, TabEnd);
+    if (TabStart < FScrollOffset) or (TabEnd > FScrollOffset + ViewSize) then
+      EnsureTabVisible(FTabIndex);
+  end;
+
   // Resync buttons so Paint's viewport never disagrees with what's on screen
   UpdateScrollButtons;
 
@@ -1065,67 +1082,39 @@ var
   i: Integer;
   R, View: TRect;
   VisSize, ViewEnd, ViewSize: Integer;
+  TabStart, TabEnd: Integer;
 begin
   if FTabs.Count = 0 then Exit;
 
   View := TabsViewportRect;
+  ViewSize := AxisSize(View);
+  ViewEnd  := FScrollOffset + ViewSize;
 
-  if IsHorizontal then
+  for i := 0 to FTabs.Count - 1 do
   begin
-    ViewSize := View.Width;
-    ViewEnd  := FScrollOffset + ViewSize;
+    if not FTabs[i].Visible then Continue;
 
-    for i := 0 to FTabs.Count - 1 do
+    R := FTabs[i].FBoundRect;
+    GetAxisSpan(R, TabStart, TabEnd);
+
+    if (TabStart < FScrollOffset) and (TabEnd > FScrollOffset) then
     begin
-      if not FTabs[i].Visible then Continue;
-      R := FTabs[i].FBoundRect;
+      VisSize := TabEnd - FScrollOffset;
 
-      if (R.Left < FScrollOffset) and (R.Right > FScrollOffset) then
-      begin
-        VisSize := R.Right - FScrollOffset;
+      if VisSize < MinUsefulTabSize then
+        FScrollOffset := TabEnd - GetScale(cTabOverlap);
 
-        if VisSize < MinUsefulTabSize then
-          FScrollOffset := R.Right - GetScale(cTabOverlap);
-
-        Break;
-      end;
-
-      if (R.Left < ViewEnd) and (R.Right > ViewEnd) then
-      begin
-        VisSize := ViewEnd - R.Left;
-
-        if VisSize < MinUsefulTabSize then
-          FScrollOffset := Max(0, R.Left - ViewSize);
-
-        Break;
-      end;
+      Break;
     end;
-  end
-  else // Vertical
-  begin
-    ViewSize := View.Height;
-    ViewEnd  := FScrollOffset + ViewSize;
 
-    for i := 0 to FTabs.Count - 1 do
+    if (TabStart < ViewEnd) and (TabEnd > ViewEnd) then
     begin
-      if not FTabs[i].Visible then Continue;
-      R := FTabs[i].FBoundRect;
+      VisSize := ViewEnd - TabStart;
 
-      if (R.Top < FScrollOffset) and (R.Bottom > FScrollOffset) then
-      begin
-        VisSize := R.Bottom - FScrollOffset;
-        if VisSize < MinUsefulTabSize then
-          FScrollOffset := R.Bottom - GetScale(cTabOverlap);
-        Break;
-      end;
+      if VisSize < MinUsefulTabSize then
+        FScrollOffset := Max(0, TabStart - ViewSize);
 
-      if (R.Top < ViewEnd) and (R.Bottom > ViewEnd) then
-      begin
-        VisSize := ViewEnd - R.Top;
-        if VisSize < MinUsefulTabSize then
-          FScrollOffset := Max(0, R.Top - ViewSize);
-        Break;
-      end;
+      Break;
     end;
   end;
 
@@ -1272,9 +1261,11 @@ end;
 procedure TExtTabCtrl.ScrollPrev(Sender: TObject);
 var
   i: Integer;
-  VisibleStart: Integer;
+  VisibleStart, TabStart, TabEnd: Integer;
 begin
   if FScrollOffset = 0 then Exit;
+
+  FManualScroll := True;
 
   // Find the first tab that starts before the current scroll position and scroll to show it
   VisibleStart := FScrollOffset;
@@ -1282,21 +1273,11 @@ begin
   for i := FTabs.Count - 1 downto 0 do
   begin
     if not FTabs[i].Visible then Continue;
-    if IsHorizontal then
+    GetAxisSpan(FTabs[i].FBoundRect, TabStart, TabEnd);
+    if TabStart < VisibleStart then
     begin
-      if FTabs[i].FBoundRect.Left < VisibleStart then
-      begin
-        FScrollOffset := FTabs[i].FBoundRect.Left;
-        Break;
-      end;
-    end
-    else
-    begin
-      if FTabs[i].FBoundRect.Top < VisibleStart then
-      begin
-        FScrollOffset := FTabs[i].FBoundRect.Top;
-        Break;
-      end;
+      FScrollOffset := TabStart;
+      Break;
     end;
   end;
   if FScrollOffset < 0 then FScrollOffset := 0;
@@ -1309,35 +1290,22 @@ procedure TExtTabCtrl.ScrollNext(Sender: TObject);
 var
   i: Integer;
   View: TRect;
-  ViewSize, VisibleEnd: Integer;
+  ViewSize, VisibleEnd, TabStart, TabEnd: Integer;
 begin
+  FManualScroll := True;
+
   View := TabsViewportRect;
-  if IsHorizontal then
+  ViewSize := AxisSize(View);
+  VisibleEnd := FScrollOffset + ViewSize;
+
+  for i := 0 to FTabs.Count - 1 do
   begin
-    ViewSize := View.Width;
-    VisibleEnd := FScrollOffset + ViewSize;
-    for i := 0 to FTabs.Count - 1 do
+    if not FTabs[i].Visible then Continue;
+    GetAxisSpan(FTabs[i].FBoundRect, TabStart, TabEnd);
+    if TabEnd > VisibleEnd then
     begin
-      if not FTabs[i].Visible then Continue;
-      if FTabs[i].FBoundRect.Right > VisibleEnd then
-      begin
-        FScrollOffset := FTabs[i].FBoundRect.Left;
-        Break;
-      end;
-    end;
-  end
-  else
-  begin
-    ViewSize := View.Height;
-    VisibleEnd := FScrollOffset + ViewSize;
-    for i := 0 to FTabs.Count - 1 do
-    begin
-      if not FTabs[i].Visible then Continue;
-      if FTabs[i].FBoundRect.Bottom > VisibleEnd then
-      begin
-        FScrollOffset := FTabs[i].FBoundRect.Top;
-        Break;
-      end;
+      FScrollOffset := TabStart;
+      Break;
     end;
   end;
   FScrollOffset := Min(MaxScrollOffset, FScrollOffset);
@@ -1654,7 +1622,7 @@ begin
     ShowPrev := FScrollOffset > 0;
 
     ViewNoNext := TabsViewportRect(ShowPrev, False, ShowAdd);
-    AvailNoNext := IfThen(IsHorizontal, ViewNoNext.Width, ViewNoNext.Height);
+    AvailNoNext := AxisSize(ViewNoNext);
     ShowNext := FTotalTabsSize > FScrollOffset + AvailNoNext;
   end;
 
@@ -1864,6 +1832,36 @@ begin
   Result := not IsVertical;
 end;
 
+procedure TExtTabCtrl.GetAxisSpan(const R: TRect; out AStart, AEnd: Integer);
+begin
+  AStart := IfThen(IsHorizontal, R.Left, R.Top);
+  AEnd := IfThen(IsHorizontal, R.Right, R.Bottom);
+end;
+
+function TExtTabCtrl.AxisSize(const R: TRect): Integer;
+begin
+  Result := IfThen(IsHorizontal, R.Width, R.Height);
+end;
+
+// Translate a tab's logical FBoundRect into screen/view coordinates
+procedure TExtTabCtrl.OffsetToView(var R: TRect; const View: TRect);
+begin
+  if IsHorizontal then
+    Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
+  else
+    Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+end;
+
+// Inverse of OffsetToView for a single point
+function TExtTabCtrl.ViewToContent(const P: TPoint; const View: TRect): TPoint;
+begin
+  Result := Point(P.X - View.Left, P.Y - View.Top);
+  if IsHorizontal then
+    Inc(Result.X, FScrollOffset)
+  else
+    Inc(Result.Y, FScrollOffset);
+end;
+
 function TExtTabCtrl.CloseButtonRect(Tab: TExtTab): TRect;
 var
   CloseW, CloseH, M: Integer;
@@ -1912,10 +1910,7 @@ begin
   Result := -1;
   View := TabsViewportRect;
   if not PtInRect(View, Point(X, Y)) then Exit;
-  if IsHorizontal then
-    P := Point(X - View.Left + FScrollOffset, Y - View.Top)
-  else
-    P := Point(X - View.Left, Y - View.Top + FScrollOffset);
+  P := ViewToContent(Point(X, Y), View);
 
   for i := 0 to FTabs.Count - 1 do
     if PtInRect(FTabs[i].FBoundRect, P) then
@@ -1927,10 +1922,7 @@ var
   View: TRect;
 begin
   View := TabsViewportRect;
-  if IsHorizontal then
-    Result := Max(0, FTotalTabsSize - View.Width)
-  else
-    Result := Max(0, FTotalTabsSize - View.Height);
+  Result := Max(0, FTotalTabsSize - AxisSize(View));
 end;
 
 procedure TExtTabCtrl.EnsureTabVisible(Index: Integer);
@@ -1942,6 +1934,8 @@ var
 begin
   if (Index < 0) or (Index >= FTabs.Count) then Exit;
 
+  if Index = FTabIndex then FManualScroll := False;
+
   // CalcLayout ensures FBoundRect/FTotalTabsSize are current for the
   // current orientation before we measure anything
   CalcLayout;
@@ -1952,21 +1946,12 @@ begin
   ShowNext := csDesigning in ComponentState;
   TotalSize := FTotalTabsSize;
 
-  if IsHorizontal then
-  begin
-    TabStart := R.Left;
-    TabEnd := R.Right;
-  end
-  else
-  begin
-    TabStart := R.Top;
-    TabEnd := R.Bottom;
-  end;
+  GetAxisSpan(R, TabStart, TabEnd);
   TabExtend := TabEnd - TabStart;
 
   // Step 1: does the whole strip fit with no scroll buttons at all?
   ViewNoButtons := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
-  ViewSize := IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height);
+  ViewSize := AxisSize(ViewNoButtons);
   if TotalSize <= ViewSize then
   begin
     FScrollOffset := 0;
@@ -1977,7 +1962,7 @@ begin
 
   // Step 2: can we avoid ScrollPrev? (offset = 0, only ScrollNext shown)
   ViewNoPrev := TabsViewportRect(ShowPrev, True, ShowAdd);
-  ViewSize := IfThen(IsHorizontal, ViewNoPrev.Width, ViewNoPrev.Height);
+  ViewSize := AxisSize(ViewNoPrev);
   if (TabStart >= 0) and (TabEnd <= ViewSize) then
   begin
     FScrollOffset := 0;
@@ -1989,7 +1974,7 @@ begin
   // Step 3: can we avoid ScrollNext? (rightmost tab flush with the
   // no-ScrollNext edge, only ScrollPrev shown)
   ViewNoNext := TabsViewportRect(True, ShowNext, ShowAdd);
-  ViewSize := IfThen(IsHorizontal, ViewNoNext.Width, ViewNoNext.Height);
+  ViewSize := AxisSize(ViewNoNext);
   // Offset that puts the last tab's trailing edge flush with this viewport
   if (TotalSize - ViewSize >= 0) then
   begin
@@ -2005,7 +1990,7 @@ begin
   // Step 4: neither button is avoidable (center the tab in the viewport that
   // has both scroll buttons present)
   ViewBoth := TabsViewportRect(True, True, ShowAdd);
-  ViewSize := IfThen(IsHorizontal, ViewBoth.Width, ViewBoth.Height);
+  ViewSize := AxisSize(ViewBoth);
 
   FScrollOffset := TabStart - (ViewSize - TabExtend) div 2;
   FScrollOffset := Max(0, Min(FScrollOffset, TotalSize - ViewSize));
@@ -2024,25 +2009,18 @@ var
 begin
   if (Index < 0) or (Index >= FTabs.Count) then Exit;
 
+  if Index = FTabIndex then FManualScroll := False;
+
   // CalcLayout ensures FBoundRect/FTotalTabsSize are current for the
   // current orientation before we measure anything
   CalcLayout;
 
   R := FTabs[Index].FBoundRect;
-  if IsHorizontal then
-  begin
-    TabStart := R.Left;
-    TabEnd := R.Right;
-  end
-  else
-  begin
-    TabStart := R.Top;
-    TabEnd := R.Bottom;
-  end;
+  GetAxisSpan(R, TabStart, TabEnd);
 
   // Use the current viewport rather than recomputing the optimal button configuration
   View := TabsViewportRect;
-  ViewSize := IfThen(IsHorizontal, View.Width, View.Height);
+  ViewSize := AxisSize(View);
 
   if TabStart < FScrollOffset then
     FScrollOffset := TabStart                  // clipped on the near edge
@@ -2082,7 +2060,7 @@ begin
   ShowPrev := csDesigning in ComponentState;
   ShowNext := csDesigning in ComponentState;
   ViewNoButtons := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
-  Can := FTotalTabsSize > (IfThen(IsHorizontal, ViewNoButtons.Width, ViewNoButtons.Height));
+  Can := FTotalTabsSize > (AxisSize(ViewNoButtons));
 
   NewPrevVis := FScrollOffset > 0;
   NewNextVis := Can and (FScrollOffset < MaxScrollOffset);
@@ -3005,10 +2983,7 @@ begin
       ImgW := FInternalImages.WidthForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
       ImgH := FInternalImages.HeightForPPI[FImagesWidth.TabsWidth, Font.PixelsPerInch];
 
-      if IsHorizontal then
-        ImgExtent := ImgW + GetScale(cImageSpacing)
-      else
-        ImgExtent := ImgH + GetScale(cImageSpacing);
+      ImgExtent := IfThen(IsHorizontal, ImgW, ImgH) + GetScale(cImageSpacing);
     end
     // Fallback to the standalone TBitmap property
     else if Assigned(FTabs[i].FImage) and not FTabs[i].FImage.Empty then
@@ -3016,10 +2991,7 @@ begin
       ImgW := FTabs[i].Image.Width;
       ImgH := FTabs[i].Image.Height;
 
-      if IsHorizontal then
-        ImgExtent := ImgW + GetScale(cImageSpacing)
-      else
-        ImgExtent := ImgH + GetScale(cImageSpacing);
+      ImgExtent := IfThen(IsHorizontal, ImgW, ImgH) + GetScale(cImageSpacing);
     end;
 
     if (toShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton then
@@ -3049,7 +3021,7 @@ var
   i: Integer;
   OrgSaveIdx, ClipSaveIdx: Integer;
   R, View, Dummy, TabRect: TRect;
-  IndicatorPos: Integer;
+  IndicatorPos, TabStart, TabEnd: Integer;
 begin
   if not HandleAllocated then Exit;
 
@@ -3076,10 +3048,7 @@ begin
       begin
         if not FTabs[i].Visible then Continue;
         R := FTabs[i].FBoundRect;
-        if IsHorizontal then
-          Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
-        else
-          Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+        OffsetToView(R, View);
 
         if IntersectRect(Dummy, R, View) then
           DrawTab(Canvas, i, R, i = FTabIndex);
@@ -3102,31 +3071,24 @@ begin
             TabRect := FTabs[FTabs.Count - 1].FBoundRect;
         end;
 
+        // Logical position: the leading edge of the target tab, or the
+        // trailing edge of the last tab when dropping at the very end
+        GetAxisSpan(TabRect, TabStart, TabEnd);
+        if FDragTargetIndex = FTabs.Count then
+          IndicatorPos := TabEnd
+        else
+          IndicatorPos := TabStart;
+
+        // Transform logical position to visual position on the tab-flow axis
+        IndicatorPos := IndicatorPos - FScrollOffset + IfThen(IsHorizontal, View.Left, View.Top);
+
         if IsHorizontal then
         begin
-          // Calculate logical X position
-          if FDragTargetIndex = FTabs.Count then
-            IndicatorPos := TabRect.Right
-          else
-            IndicatorPos := TabRect.Left;
-
-          // Transform Logical X to Visual X: (Pos - Scroll + Offset)
-          IndicatorPos := IndicatorPos - FScrollOffset + View.Left;
-
           Canvas.MoveTo(IndicatorPos, View.Top);
           Canvas.LineTo(IndicatorPos, View.Bottom);
         end
         else
         begin
-          // Calculate logical Y position
-          if FDragTargetIndex = FTabs.Count then
-            IndicatorPos := TabRect.Bottom
-          else
-            IndicatorPos := TabRect.Top;
-
-          // Transform Logical Y to Visual Y
-          IndicatorPos := IndicatorPos - FScrollOffset + View.Top;
-
           Canvas.MoveTo(View.Left, IndicatorPos);
           Canvas.LineTo(View.Right, IndicatorPos);
         end;
@@ -3138,10 +3100,7 @@ begin
          (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
       begin
         R := FTabs[FTabIndex].FBoundRect;
-        if IsHorizontal then
-          Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
-        else
-          Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+        OffsetToView(R, View);
         R := GetTabTextBounds(Canvas, R, FTabs[FTabIndex]);
         InflateRect(R, GetScale(2), GetScale(2));
         DrawFocusRect(Canvas.Handle, R);
@@ -3294,10 +3253,7 @@ begin
     CR := CloseButtonRect(FTabs[Idx]);
     R := FTabs[Idx].FBoundRect;
 
-    if IsHorizontal then
-      Types.OffsetRect(R, View.Left - FScrollOffset, View.Top)
-    else
-      Types.OffsetRect(R, View.Left, View.Top - FScrollOffset);
+    OffsetToView(R, View);
 
     Types.OffsetRect(CR, R.Left, R.Top);
 
@@ -3326,7 +3282,7 @@ procedure TExtTabCtrl.MouseMove(Shift: TShiftState; X, Y: Integer);
 var
   i, HoverNewTab: Integer;
   TabRect: TRect;
-  MousePos: Integer;
+  MousePos, TabStart, TabEnd: Integer;
   View: TRect;
   P: TPoint;
   NewHint, OldHint: String;
@@ -3416,10 +3372,7 @@ begin
        FTabs[HoverNewTab].ShowCloseButton then
     begin
       TabRect := FTabs[HoverNewTab].FBoundRect;
-      if IsHorizontal then
-        Types.OffsetRect(TabRect, View.Left - FScrollOffset, View.Top)
-      else
-        Types.OffsetRect(TabRect, View.Left, View.Top - FScrollOffset);
+      OffsetToView(TabRect, View);
 
       P := Point(X, Y);
       if PtInRect(CloseButtonRect(FTabs[HoverNewTab]), Point(P.X - TabRect.Left,
@@ -3449,34 +3402,21 @@ begin
     // Drag reorder
     FDragTargetIndex := FTabs.Count;
 
-    if IsHorizontal then
-      MousePos := X - View.Left + FScrollOffset
-    else
-      MousePos := Y - View.Top + FScrollOffset;
+    P := ViewToContent(Point(X, Y), View);
+    MousePos := IfThen(IsHorizontal, P.X, P.Y);
 
     for i := 0 to FTabs.Count - 1 do
     begin
       if i = FDragIndex then Continue;
 
       TabRect := FTabs[i].FBoundRect;
+      GetAxisSpan(TabRect, TabStart, TabEnd);
 
-      if IsHorizontal then
+      // Check midpoint of the tab in logical space
+      if MousePos < (TabStart + TabEnd) div 2 then
       begin
-        // Check midpoint of the tab in logical space
-        if MousePos < (TabRect.Left + TabRect.Right) div 2 then
-        begin
-          FDragTargetIndex := i;
-          Break;
-        end;
-      end
-      else
-      begin
-        // Check midpoint of the tab in logical space
-        if MousePos < (TabRect.Top + TabRect.Bottom) div 2 then
-        begin
-          FDragTargetIndex := i;
-          Break;
-        end;
+        FDragTargetIndex := i;
+        Break;
       end;
     end;
     Invalidate;
@@ -3707,16 +3647,8 @@ procedure TExtTabCtrl.CalculatePreferredSize(var PreferredWidth, PreferredHeight
 begin
   // Clamp the control to exactly the tab-strip thickness
   // Return 0 for the free dimension so the LCL leaves it alone
-  if IsHorizontal then
-  begin
-    PreferredWidth := 0;            // user controls width freely
-    PreferredHeight := FTabSize;    // height = one tab row
-  end
-  else
-  begin
-    PreferredWidth := FTabSize;     // width = one tab column
-    PreferredHeight := 0;           // user controls height freely
-  end;
+  PreferredWidth := IfThen(IsHorizontal, 0, FTabSize);    // user controls width freely when horizontal
+  PreferredHeight := IfThen(IsHorizontal, FTabSize, 0);   // user controls height freely when vertical
 end;
 
 procedure TExtTabCtrl.CMShowHintChanged(var Message: TLMessage);
@@ -3815,22 +3747,16 @@ begin
 
   // Account for per-tab images coming from the shared ImageList
   if Assigned(FImages) then
-  begin
-    if IsHorizontal then
-      MinStrip := Max(MinStrip, FInternalImages.HeightForPPI[FImagesWidth.TabsWidth, ppi])
-    else
-      MinStrip := Max(MinStrip, FInternalImages.WidthForPPI[FImagesWidth.TabsWidth, ppi]);
-  end;
+    MinStrip := Max(MinStrip, IfThen(IsHorizontal,
+      FInternalImages.HeightForPPI[FImagesWidth.TabsWidth, ppi],
+      FInternalImages.WidthForPPI[FImagesWidth.TabsWidth, ppi]));
 
   // Account for standalone Tab.Image bitmaps
   for i := 0 to FTabs.Count - 1 do
   begin
     if Assigned(FTabs[i].FImage) and not FTabs[i].FImage.Empty then
     begin
-      if IsHorizontal then
-        ImgExtent := FTabs[i].FImage.Height
-      else
-        ImgExtent := FTabs[i].FImage.Width;
+      ImgExtent := IfThen(IsHorizontal, FTabs[i].FImage.Height, FTabs[i].FImage.Width);
       MinStrip := Max(MinStrip, ImgExtent);
     end;
   end;
