@@ -76,6 +76,9 @@ begin
   cbStyle.ItemIndex := Integer(ExtTabCtrl1.TabStyle);
   cbPos.ItemIndex := Integer(ExtTabCtrl1.TabPosition);
 
+  ExtTabCtrl1.ShowHint := True;
+  ExtTabCtrl1.ButtonHints.AddHint := 'Add a tab';
+
   Log('Application started. Keyboard support (Arrows) and Tooltips enabled.');
 end;
 

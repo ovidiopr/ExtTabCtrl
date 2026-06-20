@@ -65,12 +65,19 @@ type
     FScrollPrevHint: String;
     FScrollNextHint: String;
     FCloseHint: String;
+    FOnChange: TNotifyEvent;
+
+    procedure SetAddHint(AValue: String);
+    procedure SetScrollPrevHint(AValue: String);
+    procedure SetScrollNextHint(AValue: String);
+    procedure SetCloseHint(AValue: String);
   public
     procedure Assign(Source: TPersistent); override;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
-    property AddHint: String read FAddHint write FAddHint;
-    property ScrollPrevHint: String read FScrollPrevHint write FScrollPrevHint;
-    property ScrollNextHint: String read FScrollNextHint write FScrollNextHint;
+    property AddHint: String read FAddHint write SetAddHint;
+    property ScrollPrevHint: String read FScrollPrevHint write SetScrollPrevHint;
+    property ScrollNextHint: String read FScrollNextHint write SetScrollNextHint;
     property CloseHint: String read FCloseHint write FCloseHint;
   end;
 
@@ -269,6 +276,7 @@ type
     procedure SetOnDrawTab(AValue: TTabDrawEvent);
 
     procedure ButtonImagesChanged(Sender: TObject);
+    procedure ButtonHintsChanged(Sender: TObject);
     procedure ImagesWidthChanged(Sender: TObject);
     function TabsViewportRect(ShowPrev, ShowNext, ShowAdd: Boolean): TRect; overload;
     function TabsViewportRect: TRect; overload;
@@ -643,6 +651,42 @@ begin
 end;
 
 { TButtonHints }
+procedure TButtonHints.SetAddHint(AValue: String);
+begin
+  if FAddHint <> AValue then
+  begin
+    FAddHint := AValue;
+    if Assigned(FOnChange) then FOnChange(Self);
+  end;
+end;
+
+procedure TButtonHints.SetScrollPrevHint(AValue: String);
+begin
+  if FScrollPrevHint <> AValue then
+  begin
+    FScrollPrevHint := AValue;
+    if Assigned(FOnChange) then FOnChange(Self);
+  end;
+end;
+
+procedure TButtonHints.SetScrollNextHint(AValue: String);
+begin
+  if FScrollNextHint <> AValue then
+  begin
+    FScrollNextHint := AValue;
+    if Assigned(FOnChange) then FOnChange(Self);
+  end;
+end;
+
+procedure TButtonHints.SetCloseHint(AValue: String);
+begin
+  if FCloseHint <> AValue then
+  begin
+    FCloseHint := AValue;
+    if Assigned(FOnChange) then FOnChange(Self);
+  end;
+end;
+
 procedure TButtonHints.Assign(Source: TPersistent);
 begin
   if Source is TButtonHints then
@@ -651,6 +695,8 @@ begin
     FScrollPrevHint := TButtonHints(Source).ScrollPrevHint;
     FScrollNextHint := TButtonHints(Source).ScrollNextHint;
     FCloseHint := TButtonHints(Source).CloseHint;
+
+    if Assigned(FOnChange) then FOnChange(Self);
   end
   else
     inherited Assign(Source);
@@ -1515,6 +1561,25 @@ end;
 procedure TExtTabCtrl.ButtonImagesChanged(Sender: TObject);
 begin
   UpdateBtnImages;
+end;
+
+procedure TExtTabCtrl.ButtonHintsChanged(Sender: TObject);
+begin
+  if Assigned(FBtnAdd) then
+  begin
+    FBtnAdd.Hint := FButtonHints.AddHint;
+    FBtnAdd.ShowHint := ShowHint and (FButtonHints.AddHint <> '');
+  end;
+  if Assigned(FBtnScrollPrev) then
+  begin
+    FBtnScrollPrev.Hint := FButtonHints.ScrollPrevHint;
+    FBtnScrollPrev.ShowHint := ShowHint and (FButtonHints.ScrollPrevHint <> '');
+  end;
+  if Assigned(FBtnScrollNext) then
+  begin
+    FBtnScrollNext.Hint := FButtonHints.ScrollNextHint;
+    FBtnScrollNext.ShowHint := ShowHint and (FButtonHints.ScrollNextHint <> '');
+  end;
 end;
 
 procedure TExtTabCtrl.ImagesWidthChanged(Sender: TObject);
@@ -3316,14 +3381,7 @@ begin
 
       if ShowHint then
       begin
-        // Button hover
-        if FBtnAdd.BoundsRect.Contains(Point(X, Y)) then
-          NewHint := FButtonHints.AddHint
-        else if FBtnScrollPrev.BoundsRect.Contains(Point(X, Y)) then
-          NewHint := FButtonHints.ScrollPrevHint
-        else if FBtnScrollNext.BoundsRect.Contains(Point(X, Y)) then
-          NewHint := FButtonHints.ScrollNextHint
-        else if IsOverCloseBtn and (FButtonHints.CloseHint <> '') then
+        if IsOverCloseBtn and (FButtonHints.CloseHint <> '') then
           NewHint := FButtonHints.CloseHint
         else if (HoverNewTab <> -1) then  // Tab hover
         begin
@@ -4055,6 +4113,7 @@ begin
   FButtonImageIndexes := TButtonImageIndexes.Create(Self);
   FButtonImageIndexes.OnChange := @ButtonImagesChanged;
   FButtonHints := TButtonHints.Create;
+  FButtonHints.OnChange := @ButtonHintsChanged;
   FImagesWidth := TImagesWidth.Create;
   FImagesWidth.OnChange := @ImagesWidthChanged;
   FBorderColor := clBtnShadow;
