@@ -107,6 +107,7 @@ object Form1: TForm1
     TabSize = 32
     TabOptions = [toActivateNewTab, toShowCloseButton, toShowAddButton, toCloseOnMiddleClick, toAllowDragReorder, toRotateTabImages, toRotateAddImage, toGetFocus, toActiveBold]
     Images = ImageList1
+    ButtonHints.CloseHint = 'Close tab'
     AddMenu = PopupMenu1
     OnTabReordering = ExtTabCtrl1TabReordering
     OnTabReordered = ExtTabCtrl1TabReordered

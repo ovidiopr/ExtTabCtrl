@@ -64,12 +64,14 @@ type
     FAddHint: String;
     FScrollPrevHint: String;
     FScrollNextHint: String;
+    FCloseHint: String;
   public
     procedure Assign(Source: TPersistent); override;
   published
     property AddHint: String read FAddHint write FAddHint;
     property ScrollPrevHint: String read FScrollPrevHint write FScrollPrevHint;
     property ScrollNextHint: String read FScrollNextHint write FScrollNextHint;
+    property CloseHint: String read FCloseHint write FCloseHint;
   end;
 
   TExtFontOptions = class(TPersistent)
@@ -673,6 +675,7 @@ begin
     FAddHint := TButtonHints(Source).AddHint;
     FScrollPrevHint := TButtonHints(Source).ScrollPrevHint;
     FScrollNextHint := TButtonHints(Source).ScrollNextHint;
+    FCloseHint := TButtonHints(Source).CloseHint;
   end
   else
     inherited Assign(Source);
@@ -3287,6 +3290,7 @@ var
   P: TPoint;
   NewHint, OldHint: String;
   Msg: TLMMouse;
+  IsOverCloseBtn: Boolean;
 begin
   if csDesigning in ComponentState then
   begin
@@ -3305,6 +3309,19 @@ begin
 
   // Capture existing hint to detect change
   OldHint := Self.Hint;
+
+  // Is the mouse over the close "x" of the hovered tab?
+  IsOverCloseBtn := False;
+  if (HoverNewTab <> -1) and (toShowCloseButton in FTabOptions) and
+     FTabs[HoverNewTab].ShowCloseButton then
+  begin
+    TabRect := FTabs[HoverNewTab].FBoundRect;
+    OffsetToView(TabRect, View);
+
+    P := Point(X, Y);
+    IsOverCloseBtn := PtInRect(CloseButtonRect(FTabs[HoverNewTab]),
+      Point(P.X - TabRect.Left, P.Y - TabRect.Top));
+  end;
 
   if not FDragging then
   begin
@@ -3332,6 +3349,8 @@ begin
           NewHint := FButtonHints.ScrollPrevHint
         else if FBtnScrollNext.BoundsRect.Contains(Point(X, Y)) then
           NewHint := FButtonHints.ScrollNextHint
+        else if IsOverCloseBtn and (FButtonHints.CloseHint <> '') then
+          NewHint := FButtonHints.CloseHint
         else if (HoverNewTab <> -1) then  // Tab hover
         begin
           // Set hint to Tab.Hint or fallback to Tab.Text
@@ -3362,25 +3381,16 @@ begin
         end;
       end;
 
-    // Close button hover
+    // Close button hover (visual highlight)
     if FHoverCloseTab <> -1 then
     begin
       FHoverCloseTab := -1;
       Invalidate;  // clear the button that was previously highlighted
     end;
-    if (HoverNewTab <> -1) and (toShowCloseButton in FTabOptions) and
-       FTabs[HoverNewTab].ShowCloseButton then
+    if IsOverCloseBtn then
     begin
-      TabRect := FTabs[HoverNewTab].FBoundRect;
-      OffsetToView(TabRect, View);
-
-      P := Point(X, Y);
-      if PtInRect(CloseButtonRect(FTabs[HoverNewTab]), Point(P.X - TabRect.Left,
-        P.Y - TabRect.Top)) then
-      begin
-        FHoverCloseTab := HoverNewTab;
-        Invalidate;
-      end;
+      FHoverCloseTab := HoverNewTab;
+      Invalidate;
     end;
 
     // Drag detection
