@@ -33,6 +33,9 @@ type
   TButtonClickEvent = procedure(Sender: TObject) of object;
   TTabMouseEvent = procedure(Sender: TObject; Index: Integer) of object;
   TTabDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer) of object;
+  TButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect) of object;
+  TScrollButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsNext, IsHorizontal: Boolean) of object;
+  TCloseButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; Tab: TExtTab; IsActive, IsHover: Boolean) of object;
 
   TExtTabCtrl = class;
 
@@ -231,6 +234,9 @@ type
     FOnMouseEnterTab: TTabMouseEvent;
     FOnMouseLeaveTab: TTabMouseEvent;
     FOnDrawTab: TTabDrawEvent;
+    FOnDrawCloseButton: TCloseButtonDrawEvent;
+    FOnDrawAddButton: TButtonDrawEvent;
+    FOnDrawScrollButtons: TScrollButtonDrawEvent;
 
     FScrollOffset: Integer;
     FManualScroll: Boolean;
@@ -274,6 +280,9 @@ type
     function GetAddMenu: TPopupMenu;
 
     procedure SetOnDrawTab(AValue: TTabDrawEvent);
+    procedure SetOnDrawCloseButton(AValue: TCloseButtonDrawEvent);
+    procedure SetOnDrawAddButton(AValue: TButtonDrawEvent);
+    procedure SetOnDrawScrollButtons(AValue: TScrollButtonDrawEvent);
 
     procedure ButtonImagesChanged(Sender: TObject);
     procedure ButtonHintsChanged(Sender: TObject);
@@ -424,6 +433,9 @@ type
     property OnMouseEnterTab: TTabMouseEvent read FOnMouseEnterTab write FOnMouseEnterTab;
     property OnMouseLeaveTab: TTabMouseEvent read FOnMouseLeaveTab write FOnMouseLeaveTab;
     property OnDrawTab: TTabDrawEvent read FOnDrawTab write SetOnDrawTab;
+    property OnDrawCloseButton: TCloseButtonDrawEvent read FOnDrawCloseButton write SetOnDrawCloseButton;
+    property OnDrawAddButton: TButtonDrawEvent read FOnDrawAddButton write SetOnDrawAddButton;
+    property OnDrawScrollButtons: TScrollButtonDrawEvent read FOnDrawScrollButtons write SetOnDrawScrollButtons;
   end;
 
 function IsDarkMode: Boolean;
@@ -592,6 +604,55 @@ begin
   ACanvas.Brush.Style := bsSolid;
 
   ACanvas.Polygon(P);
+end;
+
+procedure DrawBtnClose(ACanvas: TCanvas; ARect: TRect; IsHover: Boolean);
+var
+  P: array[0..11] of TPoint;
+  D, H, CX, CY: Integer;
+  XClr: TColor;
+  SavedPenColor: TColor;
+  SavedPenWidth: Integer;
+  SavedPenStyle: TPenStyle;
+begin
+  SavedPenColor := ACanvas.Pen.Color;
+  SavedPenWidth := ACanvas.Pen.Width;
+  SavedPenStyle := ACanvas.Pen.Style;
+
+  try
+    CX := ARect.Left + ARect.Width div 2;
+    CY := ARect.Top + ARect.Height div 2;
+    D := Max(3, (Min(ARect.Width, ARect.Height) - 2) div 3);  // reach from centre
+    H := Max(1, D div 3);   // arm half-thickness
+
+    XClr := IfThen(IsHover, clRed, TColor($004040CC));
+
+    // First arm: top-left --> bottom-right (12 vertices, clock-wise)
+    P[ 0] := Point(CX - D, CY - D + H);   // left arm, top-left
+    P[ 1] := Point(CX - D + H, CY - D);   // left arm, top-right
+    P[ 2] := Point(CX, CY - H);           // centre top-right notch
+    P[ 3] := Point(CX + D - H, CY - D);   // right arm, top-left
+    P[ 4] := Point(CX + D, CY - D + H);   // right arm, top-right
+    P[ 5] := Point(CX + H, CY);           // centre right notch
+    P[ 6] := Point(CX + D, CY + D - H);   // right arm, bottom-right
+    P[ 7] := Point(CX + D - H, CY + D);   // right arm, bottom-left
+    P[ 8] := Point(CX, CY + H);           // centre bottom-left notch
+    P[ 9] := Point(CX - D + H, CY + D);   // left arm, bottom-right
+    P[10] := Point(CX - D, CY + D - H);   // left arm, bottom-left
+    P[11] := Point(CX - H, CY);           // centre left notch
+
+    ACanvas.Brush.Color := XClr;
+    ACanvas.Brush.Style := bsSolid;
+    ACanvas.Pen.Color := XClr;
+    ACanvas.Pen.Width := 1;
+    ACanvas.Pen.Style := psSolid;
+    ACanvas.Polygon(P);
+  finally
+    // Restore the original state of the Pen regardless of what happened
+    ACanvas.Pen.Color := SavedPenColor;
+    ACanvas.Pen.Width := SavedPenWidth;
+    ACanvas.Pen.Style := SavedPenStyle;
+  end;
 end;
 
 // End vector icon helpers
@@ -1346,6 +1407,7 @@ var
 begin
   Btn := TSpeedButton(Sender);
 
+  // Draw Image from List if available
   if Assigned(FImages) and (FButtonImageIndexes.AddIndex >= 0) then
   begin
     ppi := Font.PixelsPerInch;
@@ -1353,7 +1415,10 @@ begin
     ImgRes := FInternalImages.ResolutionForPPI[FImagesWidth.AddWidth, ppi, scale];
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, FButtonImageIndexes.AddIndex, gdeNormal);
   end
-  else
+  // User-supplied drawing
+  else if Assigned(FOnDrawAddButton) then
+    FOnDrawAddButton(Self, Btn.Canvas, Btn.ClientRect)
+  else // Built-in icon
     DrawBtnAdd(Btn.Canvas, Btn.ClientRect);
 end;
 
@@ -1377,7 +1442,10 @@ begin
     ImgRes := FInternalImages.ResolutionForPPI[IfThen(IsNext, FImagesWidth.NextWidth, FImagesWidth.PrevWidth), ppi, scale];
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, ImgIndex, gdeNormal);
   end
-  else
+  // User-supplied drawing
+  else if Assigned(FOnDrawScrollButtons) then
+    FOnDrawScrollButtons(Self, Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal)
+  else // Built-in icon
     DrawBtnArrow(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
 end;
 
@@ -1550,6 +1618,34 @@ begin
   begin
     FOnDrawTab := AValue;
     Invalidate;
+  end;
+end;
+
+procedure TExtTabCtrl.SetOnDrawCloseButton(AValue: TCloseButtonDrawEvent);
+begin
+  if (AValue <> FOnDrawCloseButton) then
+  begin
+    FOnDrawCloseButton := AValue;
+    Invalidate;
+  end;
+end;
+
+procedure TExtTabCtrl.SetOnDrawAddButton(AValue: TButtonDrawEvent);
+begin
+  if (AValue <> FOnDrawAddButton) then
+  begin
+    FOnDrawAddButton := AValue;
+    if Assigned(FBtnAdd) then FBtnAdd.Invalidate;
+  end;
+end;
+
+procedure TExtTabCtrl.SetOnDrawScrollButtons(AValue: TScrollButtonDrawEvent);
+begin
+  if (AValue <> FOnDrawScrollButtons) then
+  begin
+    FOnDrawScrollButtons := AValue;
+    if Assigned(FBtnScrollPrev) then FBtnScrollPrev.Invalidate;
+    if Assigned(FBtnScrollNext) then FBtnScrollNext.Invalidate;
   end;
 end;
 
@@ -2375,12 +2471,7 @@ var
   scale: Integer = 1;
   ppi: Integer;
   effect: TGraphicsDrawEffect;
-  XClr: TColor;
-  P: array[0..11] of TPoint;
-  D, H, CX, CY: Integer;
-  SavedPenColor: TColor;
-  SavedPenWidth: Integer;
-  SavedPenStyle: TPenStyle;
+  IsHover: Boolean;
 begin
   if not (toShowCloseButton in FTabOptions) or not Tab.ShowCloseButton then Exit;
 
@@ -2388,11 +2479,13 @@ begin
   CloseR := CloseButtonRect(Tab);
   Types.OffsetRect(CloseR, R.Left, R.Top);
 
-  if FHoverCloseTab = Tab.Index then
+  IsHover := (FHoverCloseTab = Tab.Index);
+  if IsHover then
     effect := gdeHighlighted
   else
     effect := gdeNormal;
 
+  // Draw Image from List if available
   if Assigned(FImages) and (FButtonImageIndexes.CloseIndex >= 0) then
   begin
     imgRes := FInternalImages.ResolutionForPPI[FImagesWidth.CloseWidth, ppi, scale];
@@ -2400,49 +2493,11 @@ begin
                 CloseR.Top + (CloseR.Height - imgRes.Height) div 2,
                 FButtonImageIndexes.CloseIndex, effect);
   end
-  else
-  begin
-    // Save the current state of the Pen
-    SavedPenColor := ACanvas.Pen.Color;
-    SavedPenWidth := ACanvas.Pen.Width;
-    SavedPenStyle := ACanvas.Pen.Style;
-
-    try
-      CX := CloseR.Left + CloseR.Width div 2;
-      CY := CloseR.Top + CloseR.Height div 2;
-      D := Max(3, (Min(CloseR.Width, CloseR.Height) - 2) div 3);  // reach from centre
-      H := Max(1, D div 3);   // arm half-thickness
-
-      XClr := IfThen(FHoverCloseTab = Tab.Index, clRed, TColor($004040CC));
-
-      // First arm: top-left --> bottom-right (12 vertices, clock-wise)
-      // We trace the outline of both arms as one 12-point polygon.
-      P[ 0] := Point(CX - D, CY - D + H);   // left arm, top-left
-      P[ 1] := Point(CX - D + H, CY - D);   // left arm, top-right
-      P[ 2] := Point(CX, CY - H);           // centre top-right notch
-      P[ 3] := Point(CX + D - H, CY - D);   // right arm, top-left
-      P[ 4] := Point(CX + D, CY - D + H);   // right arm, top-right
-      P[ 5] := Point(CX + H, CY);           // centre right notch
-      P[ 6] := Point(CX + D, CY + D - H);   // right arm, bottom-right
-      P[ 7] := Point(CX + D - H, CY + D);   // right arm, bottom-left
-      P[ 8] := Point(CX, CY + H);           // centre bottom-left notch
-      P[ 9] := Point(CX - D + H, CY + D);   // left arm, bottom-right
-      P[10] := Point(CX - D, CY + D - H);   // left arm, bottom-left
-      P[11] := Point(CX - H, CY);           // centre left notch
-
-      ACanvas.Brush.Color := XClr;
-      ACanvas.Brush.Style := bsSolid;
-      ACanvas.Pen.Color := XClr;
-      ACanvas.Pen.Width := 1;
-      ACanvas.Pen.Style := psSolid;
-      ACanvas.Polygon(P);
-    finally
-      // Restore the original state of the Pen regardless of what happened
-      ACanvas.Pen.Color := SavedPenColor;
-      ACanvas.Pen.Width := SavedPenWidth;
-      ACanvas.Pen.Style := SavedPenStyle;
-    end;
-  end;
+  // User-supplied drawing
+  else if Assigned(FOnDrawCloseButton) then
+    FOnDrawCloseButton(Self, ACanvas, CloseR, Tab, IsActive, IsHover)
+  else // Built-in icon
+    DrawBtnClose(ACanvas, CloseR, IsHover);
 end;
 
 procedure TExtTabCtrl.DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
@@ -2809,8 +2864,6 @@ begin
   if IsActive then
   begin
     // Active pill: blend component Color with clWindow for the floating look
-    // When Tab.Color is set, tint the base subtly so the color is visible
-    // without losing the characteristic macOS translucent-pill appearance
     if Tab.Color <> clNone then
       BaseClr := BlendColors(ResolveColor(Color), ResolveColor(Tab.Color), 0.25)
     else
@@ -2872,11 +2925,7 @@ begin
   Result := BlendColors(ResolveColor(clGrayText), ResolveColor(clWindowText), 0.55);
 end;
 
-// Returns the caption as it should appear on the tab:
-// 1. Padded with trailing spaces when shorter than FMinCaptionLen
-// 2. Truncated to FMaxCaptionLen with an ellipsis in the middle when longer
-//    first FMaxCaptionLen - 5 - Len(...) chars + '...' + last 5 chars
-// 3. 0 = no limit
+// Returns the caption as it should appear on the tab
 // The original caption is never modified, hints always show the full text
 function TExtTabCtrl.GetDisplayCaption(Tab: TExtTab): String;
 const
@@ -2933,13 +2982,11 @@ begin
   IsHover := (Index = FHoverTab);
   TabRect := ARect;
 
-  // Sensible defaults; the style procedure (or OnDrawTab) may override either.
+  // Sensible defaults; the style procedure (or OnDrawTab) may override either
   FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
   Indent := 2;
 
-  // If the user has assigned a custom draw event, use it
-  // Otherwise, dispatch to the built-in style
-  // Either way the background/border is drawn here
+  // Use the custom draw event (if ssigned) or the built-in style
   if Assigned(FOnDrawTab) then
     FOnDrawTab(Self, ACanvas, TabRect, IsActive, IsHover, FontColor, Indent)
   else
@@ -3213,8 +3260,6 @@ begin
 end;
 
 // Lightweight tab-switch for use at design time and from the component tree
-// Bypasses the OnTabChanging/OnTabChanged event chain so that design-time
-// selection does not fire user event handlers
 procedure TExtTabCtrl.SetDesignTabIndex(AValue: Integer);
 begin
   if (AValue < 0) or (AValue >= FTabs.Count) then Exit;
@@ -3250,8 +3295,7 @@ begin
 
     if Button = mbLeft then
     begin
-      // Child TSpeedButtons don't receive clicks at design time because the
-      // designer intercepts them
+      // Child TSpeedButtons don't receive clicks at design time
       if FBtnScrollPrev.Visible and PtInRect(FBtnScrollPrev.BoundsRect, Point(X, Y)) then
       begin
         ScrollPrev(nil);
@@ -3673,7 +3717,6 @@ end;
 procedure TExtTabCtrl.CalculatePreferredSize(var PreferredWidth, PreferredHeight: Integer; WithImplicitConstraints: Boolean);
 begin
   // Clamp the control to exactly the tab-strip thickness
-  // Return 0 for the free dimension so the LCL leaves it alone
   PreferredWidth := IfThen(IsHorizontal, 0, FTabSize);    // user controls width freely when horizontal
   PreferredHeight := IfThen(IsHorizontal, FTabSize, 0);   // user controls height freely when vertical
 end;
@@ -3719,7 +3762,6 @@ begin
   InvalidateLayout;
 end;
 
-{ Assigns the correct image list and image indices to the buttons. }
 procedure TExtTabCtrl.UpdateBtnImages;
 begin
   // Default: reset Images
@@ -3739,7 +3781,6 @@ begin
   UpdateTabSizeForImages;
 end;
 
-// Ensures FTabSize is large enough to accommodate the largest image
 procedure TExtTabCtrl.UpdateTabSizeForImages;
 var
   ppi: Integer;
@@ -3778,8 +3819,7 @@ begin
   // Leave room for the content indent on both sides of the image
   Inc(MinStrip, GetScale(cContentIndent)*2);
 
-  // Convert back from device pixels to the 96dpi-reference unit,
-  // and grow the tab strip if it is currently too small
+  // Grow the tab strip if it is currently too small
   MinStrip := MinStrip div GetScale(1);
   if FTabSize < MinStrip then
   begin
