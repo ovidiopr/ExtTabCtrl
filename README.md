@@ -141,7 +141,7 @@ When the component has keyboard focus (via Tab key or by clicking), the followin
 | `Right Arrow` / `Down Arrow` | Select the next visible tab (or previous in RTL mode) |
 | `Home` | Select the first visible tab |
 | `End` | Select the last visible tab |
-| `Mouse Wheel` (scroll) | Scroll through tabs without changing selection |
+| `Mouse Wheel` (scroll up/down) | Select the previous/next visible tab |
 
 ---
 
