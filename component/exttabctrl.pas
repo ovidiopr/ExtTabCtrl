@@ -20,6 +20,8 @@ type
                    toShowFocusRect, toActiveBold, toActiveItalic);
   TExtTabOptions = set of TExtTabOption;
 
+  TButtonType = (btClose, btAdd, btPrev, btNext);
+
   TExtTab = class;
 
   TTabCreatingEvent = procedure(Sender: TObject; var Caption: String; var Data: TObject; var Allow: Boolean) of object;
@@ -33,9 +35,8 @@ type
   TButtonClickEvent = procedure(Sender: TObject) of object;
   TTabMouseEvent = procedure(Sender: TObject; Index: Integer) of object;
   TTabDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer) of object;
-  TButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect) of object;
-  TScrollButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsNext, IsHorizontal: Boolean) of object;
-  TCloseButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; Tab: TExtTab; IsActive, IsHover: Boolean) of object;
+  TButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+    AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean) of object;
 
   TExtTabCtrl = class;
 
@@ -234,9 +235,7 @@ type
     FOnMouseEnterTab: TTabMouseEvent;
     FOnMouseLeaveTab: TTabMouseEvent;
     FOnDrawTab: TTabDrawEvent;
-    FOnDrawCloseButton: TCloseButtonDrawEvent;
-    FOnDrawAddButton: TButtonDrawEvent;
-    FOnDrawScrollButtons: TScrollButtonDrawEvent;
+    FOnDrawButton: TButtonDrawEvent;
 
     FScrollOffset: Integer;
     FManualScroll: Boolean;
@@ -280,9 +279,7 @@ type
     function GetAddMenu: TPopupMenu;
 
     procedure SetOnDrawTab(AValue: TTabDrawEvent);
-    procedure SetOnDrawCloseButton(AValue: TCloseButtonDrawEvent);
-    procedure SetOnDrawAddButton(AValue: TButtonDrawEvent);
-    procedure SetOnDrawScrollButtons(AValue: TScrollButtonDrawEvent);
+    procedure SetOnDrawButton(AValue: TButtonDrawEvent);
 
     procedure ButtonImagesChanged(Sender: TObject);
     procedure ButtonHintsChanged(Sender: TObject);
@@ -433,16 +430,14 @@ type
     property OnMouseEnterTab: TTabMouseEvent read FOnMouseEnterTab write FOnMouseEnterTab;
     property OnMouseLeaveTab: TTabMouseEvent read FOnMouseLeaveTab write FOnMouseLeaveTab;
     property OnDrawTab: TTabDrawEvent read FOnDrawTab write SetOnDrawTab;
-    property OnDrawCloseButton: TCloseButtonDrawEvent read FOnDrawCloseButton write SetOnDrawCloseButton;
-    property OnDrawAddButton: TButtonDrawEvent read FOnDrawAddButton write SetOnDrawAddButton;
-    property OnDrawScrollButtons: TScrollButtonDrawEvent read FOnDrawScrollButtons write SetOnDrawScrollButtons;
+    property OnDrawButton: TButtonDrawEvent read FOnDrawButton write SetOnDrawButton;
   end;
 
-function IsDarkMode: Boolean;
+procedure DrawBtnAdd(ACanvas: TCanvas; ARect: TRect);
+procedure DrawBtnScroll(ACanvas: TCanvas; ARect: TRect; ANext, AHorizontal: Boolean);
+procedure DrawBtnClose(ACanvas: TCanvas; ARect: TRect; IsHover: Boolean);
 
 implementation
-
-{$R exttabctrl_images.res}
 
 { Global Helpers }
 procedure SwapIntegers(var A, B: Integer);
@@ -517,7 +512,7 @@ end;
 // Vector icon helpers
 // Each helper draws into a TBitmap that is already the correct size
 
-procedure DrawBtnArrow(ACanvas: TCanvas; ARect: TRect; AForward, AHorizontal: Boolean);
+procedure DrawBtnScroll(ACanvas: TCanvas; ARect: TRect; ANext, AHorizontal: Boolean);
 var
   ASize, CX, CY, R: Integer;
   P: array[0..2] of TPoint;
@@ -532,7 +527,7 @@ begin
   // Mathematically precise 45-degree slope assignments
   if AHorizontal then
   begin
-    if AForward then begin // Pointing Right
+    if ANext then begin // Pointing Right
       P[0] := Point(CX - (R div 2), CY - R);
       P[1] := Point(CX + (R div 2), CY);
       P[2] := Point(CX - (R div 2), CY + R);
@@ -546,7 +541,7 @@ begin
   end
   else
   begin
-    if AForward then begin // Pointing Down
+    if ANext then begin // Pointing Down
       P[0] := Point(CX - R, CY - (R div 2));
       P[1] := Point(CX + R, CY - (R div 2));
       P[2] := Point(CX, CY + (R div 2));
@@ -1070,8 +1065,7 @@ begin
   Result.Caption := ACaption;
 end;
 
-{ TExtTabCtrl - Private Methods }
-
+{ TExtTabCtrl }
 procedure TExtTabCtrl.BeginInternalChange;
 begin
   Inc(FInternalChange);
@@ -1416,8 +1410,8 @@ begin
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, FButtonImageIndexes.AddIndex, gdeNormal);
   end
   // User-supplied drawing
-  else if Assigned(FOnDrawAddButton) then
-    FOnDrawAddButton(Self, Btn.Canvas, Btn.ClientRect)
+  else if Assigned(FOnDrawButton) then
+    FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, btAdd, nil, False, False)
   else // Built-in icon
     DrawBtnAdd(Btn.Canvas, Btn.ClientRect);
 end;
@@ -1429,9 +1423,11 @@ var
   ppi, scale: Integer;
   IsNext: Boolean;
   ImgIndex: Integer;
+  BtnType: TButtonType;
 begin
   Btn := TSpeedButton(Sender);
   IsNext := (Btn = FBtnScrollNext);
+  if IsNext then BtnType := btNext else BtnType := btPrev;
   ImgIndex := IfThen(IsNext, FButtonImageIndexes.ScrollNextIndex, FButtonImageIndexes.ScrollPrevIndex);
 
   // Draw Image from List if available
@@ -1443,10 +1439,10 @@ begin
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, ImgIndex, gdeNormal);
   end
   // User-supplied drawing
-  else if Assigned(FOnDrawScrollButtons) then
-    FOnDrawScrollButtons(Self, Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal)
+  else if Assigned(FOnDrawButton) then
+    FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, BtnType, nil, False, False)
   else // Built-in icon
-    DrawBtnArrow(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
+    DrawBtnScroll(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
 end;
 
 procedure TExtTabCtrl.SetTabStyle(AValue: TTabStyle);
@@ -1532,9 +1528,7 @@ begin
   begin
     FImages := AValue;
     if Assigned(FImages) then
-      FImages.FreeNotification(Self)
-    else
-      FButtonImageIndexes.Save;
+      FImages.FreeNotification(Self);
 
     // Process the external images into the internal list
     PrepareInternalTabImages(GetRotationForPosition);
@@ -1621,29 +1615,15 @@ begin
   end;
 end;
 
-procedure TExtTabCtrl.SetOnDrawCloseButton(AValue: TCloseButtonDrawEvent);
+procedure TExtTabCtrl.SetOnDrawButton(AValue: TButtonDrawEvent);
 begin
-  if (AValue <> FOnDrawCloseButton) then
+  if AValue <> FOnDrawButton then
   begin
-    FOnDrawCloseButton := AValue;
+    FOnDrawButton := AValue;
+    // Close button is drawn directly on the tab-strip canvas
     Invalidate;
-  end;
-end;
-
-procedure TExtTabCtrl.SetOnDrawAddButton(AValue: TButtonDrawEvent);
-begin
-  if (AValue <> FOnDrawAddButton) then
-  begin
-    FOnDrawAddButton := AValue;
+    // Add and scroll buttons are child TSpeedButtons; invalidate them too
     if Assigned(FBtnAdd) then FBtnAdd.Invalidate;
-  end;
-end;
-
-procedure TExtTabCtrl.SetOnDrawScrollButtons(AValue: TScrollButtonDrawEvent);
-begin
-  if (AValue <> FOnDrawScrollButtons) then
-  begin
-    FOnDrawScrollButtons := AValue;
     if Assigned(FBtnScrollPrev) then FBtnScrollPrev.Invalidate;
     if Assigned(FBtnScrollNext) then FBtnScrollNext.Invalidate;
   end;
@@ -2453,7 +2433,7 @@ begin
   end;
 end;
 
-{ Get the best matching resolution for the current DPI }
+// Get the best matching resolution for the current DPI
 procedure TExtTabCtrl.GetBaseTabBitmap(Tab: TExtTab; Dest: TBitmap);
 begin
   if Assigned(FImages) and (Tab.ImageIndex >= 0) then
@@ -2494,8 +2474,8 @@ begin
                 FButtonImageIndexes.CloseIndex, effect);
   end
   // User-supplied drawing
-  else if Assigned(FOnDrawCloseButton) then
-    FOnDrawCloseButton(Self, ACanvas, CloseR, Tab, IsActive, IsHover)
+  else if Assigned(FOnDrawButton) then
+    FOnDrawButton(Self, ACanvas, CloseR, btClose, Tab, IsActive, IsHover)
   else // Built-in icon
     DrawBtnClose(ACanvas, CloseR, IsHover);
 end;
@@ -3696,8 +3676,6 @@ begin
   // Sync hints
   ButtonHintsChanged(Self);
 
-  FButtonImageIndexes.Save;
-
   // Process the external images into the internal list
   PrepareInternalTabImages(GetRotationForPosition);
 
@@ -3764,14 +3742,10 @@ end;
 
 procedure TExtTabCtrl.UpdateBtnImages;
 begin
-  // Default: reset Images
+  // Reset Images
   FBtnAdd.Images := nil;
   FBtnScrollPrev.Images := nil;
   FBtnScrollNext.Images := nil;
-
-  // Use external images instead if available and selected
-  if Assigned(FImages) then
-    FButtonImageIndexes.Restore;
 
   FBtnAdd.Invalidate;
   FBtnScrollPrev.Invalidate;
@@ -4189,8 +4163,5 @@ begin
 
   inherited Destroy;
 end;
-
-initialization
-  {$I ExtTabCtrl.lrs}
 
 end.
