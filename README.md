@@ -127,6 +127,21 @@ Each value below refers to the "Width" key of a multi-resolution `TCustomImageLi
 | `AddHint` | Hint text for the Add button |
 | `ScrollPrevHint` | Hint text for the scroll-previous button |
 | `ScrollNextHint` | Hint text for the scroll-next button |
+| `CloseHint` | Hint text for the per-tab close button |
+
+---
+
+## Keyboard Navigation
+
+When the component has keyboard focus (via Tab key or by clicking), the following keys are supported:
+
+| Key | Action |
+|---|---|
+| `Left Arrow` / `Up Arrow` | Select the previous visible tab (or next in RTL mode) |
+| `Right Arrow` / `Down Arrow` | Select the next visible tab (or previous in RTL mode) |
+| `Home` | Select the first visible tab |
+| `End` | Select the last visible tab |
+| `Mouse Wheel` (scroll) | Scroll through tabs without changing selection |
 
 ---
 
@@ -151,6 +166,7 @@ Each value below refers to the "Width" key of a multi-resolution `TCustomImageLi
 | `OnGetFocus` | The control receives keyboard focus |
 | `OnLostFocus` | The control loses keyboard focus |
 | `OnDrawTab` | Replaces the built-in style drawing for a tab's background/border; receives the canvas, tab rectangle, active/hover state, and `var` `FontColor`/`Indent` parameters so you can still influence how the caption and stripe line are subsequently drawn |
+| `OnDrawButton` | Custom drawing for control buttons (scroll prev/next, add, close); receives canvas, button rectangle, button type, associated tab (if any), active/hover state, and a `var Skip` parameter to override the default drawing. Image drawing order: 1. `TImageList`, 2. Custom method (this event), 3. Internal method |
 
 ---
 
@@ -168,6 +184,36 @@ Each value below refers to the "Width" key of a multi-resolution `TCustomImageLi
 | `PrevVisibleTab(FromIndex: Integer): Integer` | Returns the index of the previous `Visible` tab before `FromIndex`, or `-1` if none |
 | `InvalidateLayout` | Marks the tab layout as dirty and forces a recalculation/repaint |
 | `SetDesignTabIndex(AValue: Integer)` | Lightweight tab switch intended for design-time/component-tree use; updates `TabIndex` without firing `OnTabChanging`/`OnTabChanged` |
+
+---
+
+## Design-Time Usage
+
+When using `TExtTabCtrl` in the Lazarus IDE:
+
+- **Selecting tabs**: Click directly on a tab in the designer to select it and preview its properties.
+- **Adding tabs**: Right-click the component in the designer and select "Add Tab" to create a new tab.
+- **Editing tabs**: Double-click a tab in the designer to open the collection editor, where you can add, delete, and reorder tabs.
+- **Reordering tabs**: In the collection editor, use the arrow buttons to move tabs up or down the list, or drag tabs within the editor.
+- **Properties panel**: Select individual tabs in the collection editor to edit their properties (Caption, Hint, Color, etc.) in the Object Inspector.
+- **Quick preview**: Use the `TabIndex` property in the Object Inspector to switch between tabs and preview how the control looks at design time.
+
+### Known Lazarus Designer Issue
+
+When clicking on tabs at design time, a selection rectangle may appear around the component. This is a known Lazarus designer bug ([https://gitlab.com/freepascal.org/lazarus/lazarus/-/work_items/41825](https://gitlab.com/freepascal.org/lazarus/lazarus/-/work_items/41825)) that will be fixed in Lazarus 5.0 and will be included in an eventual Lazarus 4.10 maintenance release.
+
+**Manual fix (if needed):** Edit `designer/designer.pp` and replace:
+```pascal
+TControlAccess(MouseDownComponent).MouseUp(Button, Shift, p.X, p.Y);
+Exit;
+```
+with:
+```pascal
+TControlAccess(MouseDownComponent).MouseUp(Button, Shift, p.X, p.Y);
+MouseDownComponent:=nil;
+MouseDownSender:=nil;
+Exit;
+```
 
 ---
 
