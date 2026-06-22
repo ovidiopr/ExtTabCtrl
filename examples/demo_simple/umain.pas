@@ -13,7 +13,9 @@ type
   TForm1 = class(TForm)
     cbStyle: TComboBox;
     cbPos: TComboBox;
-    chbCustomButtons: TCheckBox;
+    chbCustomAddButton: TCheckBox;
+    chbCustomCloseButtons: TCheckBox;
+    chbCustomScrollButtons: TCheckBox;
     ExtTabCtrl1: TExtTabCtrl;
     GroupBox1: TGroupBox;
     ImageList1: TImageList;
@@ -25,7 +27,7 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     PopupMenu1: TPopupMenu;
-    procedure chbCustomButtonsChange(Sender: TObject);
+    procedure chbCustomButtonChange(Sender: TObject);
     procedure ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
       AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean);
     procedure ExtTabCtrl1DrawTab(Sender: TObject; ACanvas: TCanvas;
@@ -75,8 +77,6 @@ begin
   ExtTabCtrl1.Tabs[0].StripeColor := clRed;
   ExtTabCtrl1.Tabs[1].StripeColor := clGreen;
   ExtTabCtrl1.Tabs[2].StripeColor := clBlue;
-
-  ExtTabCtrl1.ButtonImageIndexes.AddIndex := 0;
 
   cbStyle.ItemIndex := Integer(ExtTabCtrl1.TabStyle);
   cbPos.ItemIndex := Integer(ExtTabCtrl1.TabPosition);
@@ -353,10 +353,14 @@ begin
   ACanvas.Brush.Style := bsSolid;
 
   case AButtonType of
-
     // Close "x"
-    btClose:
-    begin
+    btClose: begin
+      if not chbCustomCloseButtons.Checked then
+      begin
+        Skip := True;
+        Exit;
+      end;
+
       // Subtle filled circle on hover so the X has a visual target
       if IsHover then
       begin
@@ -376,8 +380,13 @@ begin
     end;
 
     // Add "+"
-    btAdd:
-    begin
+    btAdd: begin
+      if not chbCustomAddButton.Checked then
+      begin
+        Skip := True;
+        Exit;
+      end;
+
       ACanvas.Pen.Color := FGColor;
       ACanvas.Pen.Width := 2;
       ACanvas.MoveTo(CX - D, CY);
@@ -387,8 +396,13 @@ begin
     end;
 
     // Scroll prev (left / up)
-    btPrev:
-    begin
+    btPrev: begin
+      if not chbCustomScrollButtons.Checked then
+      begin
+        Skip := True;
+        Exit;
+      end;
+
       ACanvas.Pen.Color := FGColor;
       ACanvas.Pen.Width := 1;
       ACanvas.Brush.Color := FGColor;
@@ -411,8 +425,13 @@ begin
     end;
 
     // Scroll next (right / down)
-    btNext:
-    begin
+    btNext: begin
+      if not chbCustomScrollButtons.Checked then
+      begin
+        Skip := True;
+        Exit;
+      end;
+
       ACanvas.Pen.Color := FGColor;
       ACanvas.Pen.Width := 1;
       ACanvas.Brush.Color := FGColor;
@@ -433,16 +452,12 @@ begin
       end;
       ACanvas.Polygon(Pts);
     end;
-
   end; // case
 end;
 
-procedure TForm1.chbCustomButtonsChange(Sender: TObject);
+procedure TForm1.chbCustomButtonChange(Sender: TObject);
 begin
-  if chbCustomButtons.Checked then
-    ExtTabCtrl1.OnDrawButton := @ExtTabCtrl1DrawButton
-  else
-    ExtTabCtrl1.OnDrawButton := nil;
+  ExtTabCtrl1.Invalidate;
 end;
 
 end.

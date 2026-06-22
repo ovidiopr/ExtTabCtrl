@@ -1,23 +1,23 @@
 object Form1: TForm1
   Left = 431
-  Height = 273
+  Height = 326
   Top = 133
-  Width = 368
+  Width = 416
   ActiveControl = ExtTabCtrl1
   Caption = 'Form1'
-  ClientHeight = 273
-  ClientWidth = 368
+  ClientHeight = 326
+  ClientWidth = 416
   ParentBiDiMode = False
   LCLVersion = '4.6.0.0'
   OnCreate = FormCreate
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 241
+    Height = 294
     Top = 32
-    Width = 368
+    Width = 416
     Align = alClient
-    ClientHeight = 214
-    ClientWidth = 358
+    ClientHeight = 267
+    ClientWidth = 406
     TabOrder = 0
     object lblStyle: TLabel
       Left = 24
@@ -30,7 +30,7 @@ object Form1: TForm1
       Left = 80
       Height = 19
       Top = 32
-      Width = 271
+      Width = 319
       Anchors = [akTop, akLeft, akRight]
       AutoComplete = True
       AutoCompleteText = [cbactEnabled, cbactEndOfLineComplete, cbactSearchAscending]
@@ -60,7 +60,7 @@ object Form1: TForm1
       Left = 80
       Height = 19
       Top = 0
-      Width = 272
+      Width = 320
       Anchors = [akTop, akLeft, akRight]
       ItemHeight = 15
       ItemIndex = 0
@@ -77,28 +77,46 @@ object Form1: TForm1
     end
     object MemoLog: TMemo
       Left = 8
-      Height = 120
-      Top = 88
-      Width = 344
+      Height = 133
+      Top = 128
+      Width = 392
       Anchors = [akTop, akLeft, akRight, akBottom]
       ScrollBars = ssAutoBoth
       TabOrder = 2
     end
-    object chbCustomButtons: TCheckBox
+    object chbCustomAddButton: TCheckBox
       Left = 80
       Height = 18
-      Top = 64
-      Width = 185
-      Caption = 'Draw custom button images'
+      Top = 56
+      Width = 163
+      Caption = 'Draw custom add image'
       TabOrder = 3
-      OnChange = chbCustomButtonsChange
+      OnChange = chbCustomButtonChange
+    end
+    object chbCustomCloseButtons: TCheckBox
+      Left = 80
+      Height = 18
+      Top = 80
+      Width = 178
+      Caption = 'Draw custom close images'
+      TabOrder = 4
+      OnChange = chbCustomButtonChange
+    end
+    object chbCustomScrollButtons: TCheckBox
+      Left = 80
+      Height = 18
+      Top = 104
+      Width = 178
+      Caption = 'Draw custom scroll images'
+      TabOrder = 5
+      OnChange = chbCustomButtonChange
     end
   end
   object ExtTabCtrl1: TExtTabCtrl
     Left = 0
     Height = 32
     Top = 0
-    Width = 368
+    Width = 416
     Align = alTop
     AutoSize = True
     DoubleBuffered = True
@@ -130,11 +148,12 @@ object Form1: TForm1
     OnTabClick = ExtTabCtrl1TabClick
     OnTabDblClick = ExtTabCtrl1TabDblClick
     OnImportTab = ExtTabCtrl1ImportTab
+    OnDrawButton = ExtTabCtrl1DrawButton
   end
   object ImageList1: TImageList
     Scaled = True
-    Left = 57
-    Top = 152
+    Left = 8
+    Top = 120
     Bitmap = {
       4C7A060000001000000010000000430400000000000078DAED936D6C535518C7
       6FD64563546614861A0C0AC617363FF041E3A78D111397601695178931134C04
@@ -310,8 +329,8 @@ object Form1: TForm1
     }
   end
   object PopupMenu1: TPopupMenu
-    Left = 184
-    Top = 152
+    Left = 48
+    Top = 120
     object MenuItem1: TMenuItem
       Caption = 'Add Tab'
       OnClick = OnAddClick
