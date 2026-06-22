@@ -1,22 +1,22 @@
 object Form1: TForm1
   Left = 431
-  Height = 240
+  Height = 273
   Top = 133
   Width = 368
   ActiveControl = ExtTabCtrl1
   Caption = 'Form1'
-  ClientHeight = 240
+  ClientHeight = 273
   ClientWidth = 368
   ParentBiDiMode = False
   LCLVersion = '4.6.0.0'
   OnCreate = FormCreate
   object GroupBox1: TGroupBox
     Left = 0
-    Height = 208
+    Height = 241
     Top = 32
     Width = 368
     Align = alClient
-    ClientHeight = 181
+    ClientHeight = 214
     ClientWidth = 358
     TabOrder = 0
     object lblStyle: TLabel
@@ -77,12 +77,21 @@ object Form1: TForm1
     end
     object MemoLog: TMemo
       Left = 8
-      Height = 104
-      Top = 71
+      Height = 120
+      Top = 88
       Width = 344
       Anchors = [akTop, akLeft, akRight, akBottom]
       ScrollBars = ssAutoBoth
       TabOrder = 2
+    end
+    object chbCustomButtons: TCheckBox
+      Left = 80
+      Height = 18
+      Top = 64
+      Width = 185
+      Caption = 'Draw custom button images'
+      TabOrder = 3
+      OnChange = chbCustomButtonsChange
     end
   end
   object ExtTabCtrl1: TExtTabCtrl

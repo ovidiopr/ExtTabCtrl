@@ -6,13 +6,14 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  ExtTabCtrl, LCLIntf, LResources, Menus, Types;
+  ExtTabCtrl, LCLIntf, LResources, Menus, Types, Math;
 
 type
   { TForm1 }
   TForm1 = class(TForm)
     cbStyle: TComboBox;
     cbPos: TComboBox;
+    chbCustomButtons: TCheckBox;
     ExtTabCtrl1: TExtTabCtrl;
     GroupBox1: TGroupBox;
     ImageList1: TImageList;
@@ -24,9 +25,11 @@ type
     MenuItem3: TMenuItem;
     MenuItem4: TMenuItem;
     PopupMenu1: TPopupMenu;
+    procedure chbCustomButtonsChange(Sender: TObject);
+    procedure ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+      AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean);
     procedure ExtTabCtrl1DrawTab(Sender: TObject; ACanvas: TCanvas;
-      ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor;
-      var Indent: Integer);
+      ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer);
     procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab; AObject: TObject);
     procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex, NewIndex: Integer);
     procedure FormCreate(Sender: TObject);
@@ -72,6 +75,8 @@ begin
   ExtTabCtrl1.Tabs[0].StripeColor := clRed;
   ExtTabCtrl1.Tabs[1].StripeColor := clGreen;
   ExtTabCtrl1.Tabs[2].StripeColor := clBlue;
+
+  ExtTabCtrl1.ButtonImageIndexes.AddIndex := 0;
 
   cbStyle.ItemIndex := Integer(ExtTabCtrl1.TabStyle);
   cbPos.ItemIndex := Integer(ExtTabCtrl1.TabPosition);
@@ -306,6 +311,137 @@ begin
   // XP taskbar buttons use white text in every state
   FontColor := clWhite;
   Indent := 2;
+end;
+
+procedure TForm1.ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas;
+  ARect: TRect; AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean);
+var
+  CX, CY, D: Integer;
+  IsVert: Boolean;
+  FGColor: TColor;
+  BgColor: TColor;
+  Pts: array[0..2] of TPoint;
+  APosition: TTabPosition;
+begin
+  APosition := (Sender as TExtTabCtrl).TabPosition;
+
+  CX := (ARect.Left + ARect.Right)  div 2;
+  CY := (ARect.Top + ARect.Bottom) div 2;
+
+  // Leave a 3-pixel margin on each side so the icon never touches the edge
+  D := (Min(ARect.Width, ARect.Height) div 2) - 3;
+  if D < 2 then D := 2;
+
+  // tpLeft / tpRight means the strip runs top-to-bottom; arrows flip 90°
+  IsVert := APosition in [tpLeft, tpRight];
+
+  // Colors
+  if IsHover then
+  begin
+    FGColor := clHighlightText;
+    BgColor := clHighlight;
+  end
+  else
+  begin
+    FGColor := clBtnText;
+    BgColor := clBtnFace;   // used only for the close-button hover circle
+  end;
+
+  // Per-button drawing
+  ACanvas.Pen.Style  := psSolid;
+  ACanvas.Brush.Style := bsSolid;
+
+  case AButtonType of
+
+    // Close "x"
+    btClose:
+    begin
+      // Subtle filled circle on hover so the X has a visual target
+      if IsHover then
+      begin
+        ACanvas.Brush.Color := BgColor;
+        ACanvas.Pen.Color := BgColor;
+        ACanvas.Pen.Width := 1;
+        ACanvas.Ellipse(ARect.Left + 1, ARect.Top + 1, ARect.Right - 1, ARect.Bottom - 1);
+      end;
+
+      // Two crossing lines form the X
+      ACanvas.Pen.Color := FGColor;
+      ACanvas.Pen.Width := 2;
+      ACanvas.MoveTo(CX - D, CY - D);
+      ACanvas.LineTo(CX + D + 1, CY + D + 1);
+      ACanvas.MoveTo(CX + D, CY - D);
+      ACanvas.LineTo(CX - D - 1, CY + D + 1);
+    end;
+
+    // Add "+"
+    btAdd:
+    begin
+      ACanvas.Pen.Color := FGColor;
+      ACanvas.Pen.Width := 2;
+      ACanvas.MoveTo(CX - D, CY);
+      ACanvas.LineTo(CX + D + 1, CY);
+      ACanvas.MoveTo(CX, CY - D);
+      ACanvas.LineTo(CX, CY + D + 1);
+    end;
+
+    // Scroll prev (left / up)
+    btPrev:
+    begin
+      ACanvas.Pen.Color := FGColor;
+      ACanvas.Pen.Width := 1;
+      ACanvas.Brush.Color := FGColor;
+
+      if not IsVert then
+      begin
+        // Left-pointing triangle
+        Pts[0] := Point(CX - D, CY);
+        Pts[1] := Point(CX + D, CY - D);
+        Pts[2] := Point(CX + D, CY + D);
+      end
+      else
+      begin
+        // Up-pointing triangle
+        Pts[0] := Point(CX, CY - D);
+        Pts[1] := Point(CX + D, CY + D);
+        Pts[2] := Point(CX - D, CY + D);
+      end;
+      ACanvas.Polygon(Pts);
+    end;
+
+    // Scroll next (right / down)
+    btNext:
+    begin
+      ACanvas.Pen.Color := FGColor;
+      ACanvas.Pen.Width := 1;
+      ACanvas.Brush.Color := FGColor;
+
+      if not IsVert then
+      begin
+        // Right-pointing triangle
+        Pts[0] := Point(CX + D, CY);
+        Pts[1] := Point(CX - D, CY - D);
+        Pts[2] := Point(CX - D, CY + D);
+      end
+      else
+      begin
+        // Down-pointing triangle
+        Pts[0] := Point(CX, CY + D);
+        Pts[1] := Point(CX - D, CY - D);
+        Pts[2] := Point(CX + D, CY - D);
+      end;
+      ACanvas.Polygon(Pts);
+    end;
+
+  end; // case
+end;
+
+procedure TForm1.chbCustomButtonsChange(Sender: TObject);
+begin
+  if chbCustomButtons.Checked then
+    ExtTabCtrl1.OnDrawButton := @ExtTabCtrl1DrawButton
+  else
+    ExtTabCtrl1.OnDrawButton := nil;
 end;
 
 end.
