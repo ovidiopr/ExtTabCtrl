@@ -34,7 +34,8 @@ type
   TTabImportEvent = procedure(Sender: TObject; Tab: TExtTab; AObject: TObject) of object;
   TButtonClickEvent = procedure(Sender: TObject) of object;
   TTabMouseEvent = procedure(Sender: TObject; Index: Integer) of object;
-  TTabDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer) of object;
+  TTabDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
+    IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer; var Skip: Boolean) of object;
   TButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
     AButtonType: TExtButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean) of object;
 
@@ -1438,21 +1439,24 @@ begin
     ImgRes := FInternalImages.ResolutionForPPI[FImagesWidth.AddWidth, ppi, scale];
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, FButtonImageIndexes.AddIndex, gdeNormal);
   end
-  // User-supplied drawing
-  else if Assigned(FOnDrawButton) then
+  else
   begin
-    Skip := False;
-    SavedPen := SavePen(Btn.Canvas);
-    try
-      FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, ebtAdd, nil, False, False, Skip);
-    finally
-      RestorePen(Btn.Canvas, SavedPen);
+    Skip := True;
+
+    // User-supplied drawing
+    if Assigned(FOnDrawButton) then
+    begin
+      SavedPen := SavePen(Btn.Canvas);
+      try
+        FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, ebtAdd, nil, False, False, Skip);
+      finally
+        RestorePen(Btn.Canvas, SavedPen);
+      end;
     end;
 
+    // Built-in icon
     if Skip then DrawBtnAdd(Btn.Canvas, Btn.ClientRect);
-  end
-  else // Built-in icon
-    DrawBtnAdd(Btn.Canvas, Btn.ClientRect);
+  end;
 end;
 
 procedure TExtTabCtrl.ScrollBtnPaint(Sender: TObject);
@@ -1479,21 +1483,24 @@ begin
     ImgRes := FInternalImages.ResolutionForPPI[IfThen(IsNext, FImagesWidth.NextWidth, FImagesWidth.PrevWidth), ppi, scale];
     ImgRes.Draw(Btn.Canvas, (Btn.ClientWidth - ImgRes.Width) div 2, (Btn.ClientHeight - ImgRes.Height) div 2, ImgIndex, gdeNormal);
   end
-  // User-supplied drawing
-  else if Assigned(FOnDrawButton) then
+  else
   begin
-    Skip := False;
-    SavedPen := SavePen(Btn.Canvas);
-    try
-      FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, BtnType, nil, False, False, Skip);
-    finally
-      RestorePen(Btn.Canvas, SavedPen);
+    Skip := True;
+
+    // User-supplied drawing
+    if Assigned(FOnDrawButton) then
+    begin
+      SavedPen := SavePen(Btn.Canvas);
+      try
+        FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, BtnType, nil, False, False, Skip);
+      finally
+        RestorePen(Btn.Canvas, SavedPen);
+      end;
     end;
 
+    // Built-in icon
     if Skip then DrawBtnScroll(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
-  end
-  else // Built-in icon
-    DrawBtnScroll(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
+  end;
 end;
 
 procedure TExtTabCtrl.SetTabStyle(AValue: TExtTabStyle);
@@ -2526,21 +2533,25 @@ begin
                 CloseR.Top + (CloseR.Height - imgRes.Height) div 2,
                 FButtonImageIndexes.CloseIndex, effect);
   end
-  // User-supplied drawing
-  else if Assigned(FOnDrawButton) then
+
+  else
   begin
-    Skip := False;
-    SavedPen := SavePen(ACanvas);
-    try
-      FOnDrawButton(Self, ACanvas, CloseR, ebtClose, Tab, IsActive, IsHover, Skip);
-    finally
-      RestorePen(ACanvas, SavedPen);
+    Skip := True;
+
+    // User-supplied drawing
+    if Assigned(FOnDrawButton) then
+    begin
+      SavedPen := SavePen(ACanvas);
+      try
+        FOnDrawButton(Self, ACanvas, CloseR, ebtClose, Tab, IsActive, IsHover, Skip);
+      finally
+        RestorePen(ACanvas, SavedPen);
+      end;
     end;
 
+    // Built-in icon
     if Skip then DrawBtnClose(ACanvas, CloseR, IsHover);
-  end
-  else // Built-in icon
-    DrawBtnClose(ACanvas, CloseR, IsHover);
+  end;
 end;
 
 procedure TExtTabCtrl.DrawColorStripe(ACanvas: TCanvas; const R: TRect; Tab: TExtTab; Indent: Integer);
@@ -3021,6 +3032,7 @@ var
   Tab: TExtTab;
   TabRect: TRect;
   SavedPen: TExtPenState;
+  Skip: Boolean;
 begin
   Tab := FTabs[Index];
   IsHover := (Index = FHoverTab);
@@ -3029,18 +3041,20 @@ begin
   // Sensible defaults; the style procedure (or OnDrawTab) may override either
   FontColor := IfThen(IsActive, Font.Color, InactiveFontColor);
   Indent := 2;
+  Skip := True;
 
   // Use the custom draw event (if ssigned) or the built-in style
   if Assigned(FOnDrawTab) then
   begin
     SavedPen := SavePen(ACanvas);
     try
-      FOnDrawTab(Self, ACanvas, TabRect, IsActive, IsHover, FontColor, Indent);
+      FOnDrawTab(Self, ACanvas, TabRect, IsActive, IsHover, FontColor, Indent, Skip);
     finally
       RestorePen(ACanvas, SavedPen);
     end;
-  end
-  else
+  end;
+
+  if Skip then
   begin
     case FTabStyle of
       etsButton: DrawButtonTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);

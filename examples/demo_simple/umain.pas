@@ -31,7 +31,7 @@ type
     procedure ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
       AButtonType: TExtButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean);
     procedure ExtTabCtrl1DrawTab(Sender: TObject; ACanvas: TCanvas;
-      ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer);
+      ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer; var Skip: Boolean);
     procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab; AObject: TObject);
     procedure ExtTabCtrl1TabReordered(Sender: TObject; OldIndex, NewIndex: Integer);
     procedure FormCreate(Sender: TObject);
@@ -160,12 +160,9 @@ end;
 procedure TForm1.cbStyleChange(Sender: TObject);
 begin
   if (cbStyle.ItemIndex >= 0) and (cbStyle.ItemIndex <= Ord(etsMacOS)) then
-  begin
-    ExtTabCtrl1.OnDrawTab := nil;
-    ExtTabCtrl1.TabStyle := TExtTabStyle(cbStyle.ItemIndex);
-  end
+    ExtTabCtrl1.TabStyle := TExtTabStyle(cbStyle.ItemIndex)
   else
-    ExtTabCtrl1.OnDrawTab := @ExtTabCtrl1DrawTab;
+    ExtTabCtrl1.Invalidate;
 end;
 
 procedure TForm1.cbPosChange(Sender: TObject);
@@ -221,7 +218,8 @@ begin
 end;
 
 procedure TForm1.ExtTabCtrl1DrawTab(Sender: TObject; ACanvas: TCanvas;
-  ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer);
+  ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer;
+  var Skip: Boolean);
 const
   // XP-style palette
   ClrActiveBase   = $0030AD39; // active tab: green
@@ -248,6 +246,8 @@ var
   end;
 
 begin
+  if cbStyle.ItemIndex <= Ord(etsMacOS) then Exit;
+
   // tpTop/tpBottom -> wide tabs, gradient runs top-to-bottom.
   // tpLeft/tpRight -> tall tabs, gradient runs left-to-right.
   Horizontal := (Sender as TExtTabCtrl).IsHorizontal;
@@ -311,6 +311,7 @@ begin
   // XP taskbar buttons use white text in every state
   FontColor := clWhite;
   Indent := 2;
+  Skip := False;
 end;
 
 procedure TForm1.ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas;
@@ -380,6 +381,8 @@ begin
       ACanvas.Line(CX - D, CY - D, CX + D, CY + D);
       ACanvas.Line(CX + D, CY - D, CX - D, CY + D);
       {$ENDIF}
+
+      Skip := False;
     end;
 
     // Add "+"
@@ -400,6 +403,8 @@ begin
       ACanvas.Line(CX - D, CY, CX + D, CY);
       ACanvas.Line(CX, CY - D, CX, CY + D);
       {$ENDIF}
+
+      Skip := False;
     end;
 
     // Scroll prev (left / up)
@@ -429,6 +434,8 @@ begin
         Pts[2] := Point(CX - D, CY + D);
       end;
       ACanvas.Polygon(Pts);
+
+      Skip := False;
     end;
 
     // Scroll next (right / down)
@@ -458,6 +465,8 @@ begin
         Pts[2] := Point(CX + D, CY - D);
       end;
       ACanvas.Polygon(Pts);
+
+      Skip := False;
     end;
   end; // case
 end;

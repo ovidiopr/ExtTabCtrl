@@ -148,6 +148,7 @@ object Form1: TForm1
     OnTabClick = ExtTabCtrl1TabClick
     OnTabDblClick = ExtTabCtrl1TabDblClick
     OnImportTab = ExtTabCtrl1ImportTab
+    OnDrawTab = ExtTabCtrl1DrawTab
     OnDrawButton = ExtTabCtrl1DrawButton
   end
   object ImageList1: TImageList
