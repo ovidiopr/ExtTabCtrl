@@ -326,7 +326,7 @@ var
 begin
   APosition := (Sender as TExtTabCtrl).TabPosition;
 
-  CX := (ARect.Left + ARect.Right)  div 2;
+  CX := (ARect.Left + ARect.Right) div 2;
   CY := (ARect.Top + ARect.Bottom) div 2;
 
   // Leave a 3-pixel margin on each side so the icon never touches the edge
@@ -373,10 +373,13 @@ begin
       // Two crossing lines form the X
       ACanvas.Pen.Color := FGColor;
       ACanvas.Pen.Width := 2;
-      ACanvas.MoveTo(CX - D, CY - D);
-      ACanvas.LineTo(CX + D + 1, CY + D + 1);
-      ACanvas.MoveTo(CX + D, CY - D);
-      ACanvas.LineTo(CX - D - 1, CY + D + 1);
+      {$IFDEF LCLCocoa}
+      ACanvas.Line(CX - D, CY - D, CX + D + 1, CY + D + 1);
+      ACanvas.Line(CX + D, CY - D, CX - D - 1, CY + D + 1);
+      {$ELSE}
+      ACanvas.Line(CX - D, CY - D, CX + D, CY + D);
+      ACanvas.Line(CX + D, CY - D, CX - D, CY + D);
+      {$ENDIF}
     end;
 
     // Add "+"
@@ -388,11 +391,15 @@ begin
       end;
 
       ACanvas.Pen.Color := FGColor;
-      ACanvas.Pen.Width := 2;
-      ACanvas.MoveTo(CX - D, CY);
-      ACanvas.LineTo(CX + D + 1, CY);
-      ACanvas.MoveTo(CX, CY - D);
-      ACanvas.LineTo(CX, CY + D + 1);
+      ACanvas.Pen.Width := 3;
+
+      {$IFDEF LCLCocoa}
+      ACanvas.Line(CX - D, CY, CX + D + 1, CY);
+      ACanvas.Line(CX, CY - D, CX, CY + D + 1);
+      {$ELSE}
+      ACanvas.Line(CX - D, CY, CX + D, CY);
+      ACanvas.Line(CX, CY - D, CX, CY + D);
+      {$ENDIF}
     end;
 
     // Scroll prev (left / up)
