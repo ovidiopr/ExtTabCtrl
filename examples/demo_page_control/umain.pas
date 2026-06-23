@@ -195,7 +195,7 @@ end;
 
 procedure TForm1.StyleRadioGroup1Click(Sender: TObject);
 begin
-  ExtTabCtrl1.TabStyle := TTabStyle((Sender as TRadioGroup).ItemIndex);
+  ExtTabCtrl1.TabStyle := TExtTabStyle((Sender as TRadioGroup).ItemIndex);
   Log('Style changed!');
 end;
 
@@ -203,12 +203,12 @@ procedure TForm1.PositionRadioGroup1Click(Sender: TObject);
 begin
   ExtTabCtrl1.BeginUpdate;
   try
-    ExtTabCtrl1.TabPosition := TTabPosition((Sender as TRadioGroup).ItemIndex);
+    ExtTabCtrl1.TabPosition := TExtTabPosition((Sender as TRadioGroup).ItemIndex);
     case ExtTabCtrl1.TabPosition of
-      tpTop: ExtTabCtrl1.Align := alTop;
-      tpBottom: ExtTabCtrl1.Align := alBottom;
-      tpLeft: ExtTabCtrl1.Align := alLeft;
-      tpRight: ExtTabCtrl1.Align := alRight;
+      etpTop: ExtTabCtrl1.Align := alTop;
+      etpBottom: ExtTabCtrl1.Align := alBottom;
+      etpLeft: ExtTabCtrl1.Align := alLeft;
+      etpRight: ExtTabCtrl1.Align := alRight;
     end;
   finally
     ExtTabCtrl1.EndUpdate;

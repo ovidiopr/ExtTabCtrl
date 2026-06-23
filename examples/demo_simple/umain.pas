@@ -29,7 +29,7 @@ type
     PopupMenu1: TPopupMenu;
     procedure chbCustomButtonChange(Sender: TObject);
     procedure ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
-      AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean);
+      AButtonType: TExtButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean);
     procedure ExtTabCtrl1DrawTab(Sender: TObject; ACanvas: TCanvas;
       ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer);
     procedure ExtTabCtrl1ImportTab(Sender: TObject; Tab: TExtTab; AObject: TObject);
@@ -159,10 +159,10 @@ end;
 
 procedure TForm1.cbStyleChange(Sender: TObject);
 begin
-  if (cbStyle.ItemIndex >= 0) and (cbStyle.ItemIndex <= Ord(tsMacOS)) then
+  if (cbStyle.ItemIndex >= 0) and (cbStyle.ItemIndex <= Ord(etsMacOS)) then
   begin
     ExtTabCtrl1.OnDrawTab := nil;
-    ExtTabCtrl1.TabStyle := TTabStyle(cbStyle.ItemIndex);
+    ExtTabCtrl1.TabStyle := TExtTabStyle(cbStyle.ItemIndex);
   end
   else
     ExtTabCtrl1.OnDrawTab := @ExtTabCtrl1DrawTab;
@@ -172,12 +172,12 @@ procedure TForm1.cbPosChange(Sender: TObject);
 begin
   ExtTabCtrl1.BeginUpdate;
   try
-    ExtTabCtrl1.TabPosition := TTabPosition(cbPos.ItemIndex);
+    ExtTabCtrl1.TabPosition := TExtTabPosition(cbPos.ItemIndex);
     case ExtTabCtrl1.TabPosition of
-      tpTop:  ExtTabCtrl1.Align := alTop;
-      tpBottom: ExtTabCtrl1.Align := alBottom;
-      tpLeft: ExtTabCtrl1.Align := alLeft;
-      tpRight: ExtTabCtrl1.Align := alRight;
+      etpTop:  ExtTabCtrl1.Align := alTop;
+      etpBottom: ExtTabCtrl1.Align := alBottom;
+      etpLeft: ExtTabCtrl1.Align := alLeft;
+      etpRight: ExtTabCtrl1.Align := alRight;
     end;
   finally
     ExtTabCtrl1.EndUpdate;
@@ -314,7 +314,7 @@ begin
 end;
 
 procedure TForm1.ExtTabCtrl1DrawButton(Sender: TObject; ACanvas: TCanvas;
-  ARect: TRect; AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean;
+  ARect: TRect; AButtonType: TExtButtonType; ATab: TExtTab; IsActive, IsHover: Boolean;
   var Skip: Boolean);
 var
   CX, CY, D: Integer;
@@ -322,7 +322,7 @@ var
   FGColor: TColor;
   BgColor: TColor;
   Pts: array[0..2] of TPoint;
-  APosition: TTabPosition;
+  APosition: TExtTabPosition;
 begin
   APosition := (Sender as TExtTabCtrl).TabPosition;
 
@@ -334,7 +334,7 @@ begin
   if D < 2 then D := 2;
 
   // tpLeft / tpRight means the strip runs top-to-bottom; arrows flip 90°
-  IsVert := APosition in [tpLeft, tpRight];
+  IsVert := APosition in [etpLeft, etpRight];
 
   // Colors
   if IsHover then
@@ -354,7 +354,7 @@ begin
 
   case AButtonType of
     // Close "x"
-    btClose: begin
+    ebtClose: begin
       if not chbCustomCloseButtons.Checked then
       begin
         Skip := True;
@@ -380,7 +380,7 @@ begin
     end;
 
     // Add "+"
-    btAdd: begin
+    ebtAdd: begin
       if not chbCustomAddButton.Checked then
       begin
         Skip := True;
@@ -396,7 +396,7 @@ begin
     end;
 
     // Scroll prev (left / up)
-    btPrev: begin
+    ebtPrev: begin
       if not chbCustomScrollButtons.Checked then
       begin
         Skip := True;
@@ -425,7 +425,7 @@ begin
     end;
 
     // Scroll next (right / down)
-    btNext: begin
+    ebtNext: begin
       if not chbCustomScrollButtons.Checked then
       begin
         Skip := True;

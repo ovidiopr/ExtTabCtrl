@@ -56,7 +56,7 @@ procedure TForm1.RadioGroup1Click(Sender: TObject);
 begin
   ExtTabCtrl1.BeginUpdate;
   try
-    ExtTabCtrl1.TabPosition := TTabPosition(RadioGroup1.ItemIndex);
+    ExtTabCtrl1.TabPosition := TExtTabPosition(RadioGroup1.ItemIndex);
     ExtTabCtrl1.Align := TAlign(RadioGroup1.ItemIndex + 1);
   finally
     ExtTabCtrl1.EndUpdate;
@@ -65,15 +65,15 @@ end;
 
 procedure TForm1.RadioGroup2Click(Sender: TObject);
 begin
-  ExtTabCtrl1.TabStyle := TTabStyle(RadioGroup2.ItemIndex);
+  ExtTabCtrl1.TabStyle := TExtTabStyle(RadioGroup2.ItemIndex);
 end;
 
 procedure TForm1.cbRotateNewTabBtnChange(Sender: TObject);
 begin
   if cbRotateNewTabBtn.Checked then
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [toRotateAddImage]
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [etoRotateAddImage]
   else
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [toRotateAddImage];
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [etoRotateAddImage];
 end;
 
 procedure TForm1.cbUseExternalImagesChange(Sender: TObject);
@@ -87,17 +87,17 @@ end;
 procedure TForm1.cbShowNewTabBtnChange(Sender: TObject);
 begin
   if cbShowNewTabBtn.Checked then
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [toShowAddButton]
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [etoShowAddButton]
   else
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [toShowAddButton];
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [etoShowAddButton];
 end;
 
 procedure TForm1.cbRotateTabIconsChange(Sender: TObject);
 begin
   if cbRotateTabIcons.Checked then
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [toRotateTabImages]
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [etoRotateTabImages]
   else
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [toRotateTabImages];
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [etoRotateTabImages];
 end;
 
 procedure TForm1.ExtTabCtrl1TabCreated(Sender: TObject);

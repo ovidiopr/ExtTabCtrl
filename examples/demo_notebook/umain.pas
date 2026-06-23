@@ -107,15 +107,15 @@ end;
 
 procedure TForm1.CmbTabStyleChange(Sender: TObject);
 begin
-  ExtTabCtrl1.TabStyle := TTabStyle(CmbTabStyle.ItemIndex);
+  ExtTabCtrl1.TabStyle := TExtTabStyle(CmbTabStyle.ItemIndex);
 end;
 
 procedure TForm1.cbShowAddButtonChange(Sender: TObject);
 begin
   if cbShowAddButton.Checked then
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [toShowAddButton]
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [etoShowAddButton]
   else
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [toShowAddButton];
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [etoShowAddButton];
 end;
 
 procedure TForm1.Button1Click(Sender: TObject);
@@ -127,9 +127,9 @@ end;
 procedure TForm1.cbShowCloseButtonsChange(Sender: TObject);
 begin
   if cbShowCloseButtons.Checked then
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [toShowCloseButton]
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions + [etoShowCloseButton]
   else
-    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [toShowCloseButton];
+    ExtTabCtrl1.TabOptions := ExtTabCtrl1.TabOptions - [etoShowCloseButton];
 end;
 
 procedure TForm1.cbShowTabStripesChange(Sender: TObject);

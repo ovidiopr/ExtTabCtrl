@@ -35,7 +35,7 @@ object Form1: TForm1
       end>
     TabIndex = 0
     TabSize = 28
-    TabOptions = [toActivateNewTab, toShowCloseButton, toShowAddButton, toCloseOnMiddleClick, toAllowDragReorder, toGetFocus, toActiveBold]
+    TabOptions = [etoActivateNewTab, etoShowCloseButton, etoShowAddButton, etoCloseOnMiddleClick, etoAllowDragReorder, etoGetFocus, etoActiveBold]
     OnTabReordering = ExtTabCtrl1TabReordering
     OnTabReordered = ExtTabCtrl1TabReordered
     OnTabCreating = ExtTabCtrl1TabCreating

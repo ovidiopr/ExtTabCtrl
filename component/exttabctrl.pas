@@ -10,17 +10,17 @@ uses
   IntfGraphics{$IFDEF LCLDesign}, PropEdits{$ENDIF};
 
 type
-  TTabPosition = (tpTop, tpBottom, tpLeft, tpRight);
+  TExtTabPosition = (etpTop, etpBottom, etpLeft, etpRight);
 
-  TTabStyle = (tsFlat, tsButton, tsDelphi, tsChrome, tsMacOS);
+  TExtTabStyle = (etsFlat, etsButton, etsDelphi, etsChrome, etsMacOS);
 
-  TExtTabOption = (toActivateNewTab, toShowCloseButton, toShowAddButton,
-                   toCloseOnMiddleClick, toAllowDragReorder,
-                   toRotateTabImages, toRotateAddImage, toGetFocus,
-                   toShowFocusRect, toActiveBold, toActiveItalic);
+  TExtTabOption = (etoActivateNewTab, etoShowCloseButton, etoShowAddButton,
+                   etoCloseOnMiddleClick, etoAllowDragReorder,
+                   etoRotateTabImages, etoRotateAddImage, etoGetFocus,
+                   etoShowFocusRect, etoActiveBold, etoActiveItalic);
   TExtTabOptions = set of TExtTabOption;
 
-  TButtonType = (btClose, btAdd, btPrev, btNext);
+  TExtButtonType = (ebtClose, ebtAdd, ebtPrev, ebtNext);
 
   TExtTab = class;
 
@@ -36,11 +36,11 @@ type
   TTabMouseEvent = procedure(Sender: TObject; Index: Integer) of object;
   TTabDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect; IsActive, IsHover: Boolean; var FontColor: TColor; var Indent: Integer) of object;
   TButtonDrawEvent = procedure(Sender: TObject; ACanvas: TCanvas; ARect: TRect;
-    AButtonType: TButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean) of object;
+    AButtonType: TExtButtonType; ATab: TExtTab; IsActive, IsHover: Boolean; var Skip: Boolean) of object;
 
   TExtTabCtrl = class;
 
-  TButtonImageIndexes = class(TPersistent)
+  TExtButtonImageIndexes = class(TPersistent)
   private
     FOwnerCtrl: TExtTabCtrl;
     FImgIndex: array[0..3] of TImageIndex;
@@ -63,7 +63,7 @@ type
     property CloseIndex: TImageIndex index 3 read GetIndex write SetIndex default -1;
   end;
 
-  TButtonHints = class(TPersistent)
+  TExtButtonHints = class(TPersistent)
   private
     FAddHint: String;
     FScrollPrevHint: String;
@@ -107,7 +107,7 @@ type
     property FontStyles: TFontStyles read FFontStyles write SetFontStyles default [];
   end;
 
-  TImagesWidth = class(TPersistent)
+  TExtImagesWidth = class(TPersistent)
   private
     FPrevWidth: Integer;
     FNextWidth: Integer;
@@ -201,15 +201,15 @@ type
     FTotalTabsSize: Integer;
     FTabs: TExtTabs;
     FTabIndex: Integer;
-    FTabStyle: TTabStyle;
+    FTabStyle: TExtTabStyle;
     FTabOptions: TExtTabOptions;
     FBtnAdd: TSpeedButton;
 
     FImages: TCustomImageList;
     FInternalImages: TCustomImageList;    // Copy of FImages with rotated images
-    FButtonImageIndexes: TButtonImageIndexes;
-    FButtonHints: TButtonHints;
-    FImagesWidth: TImagesWidth;
+    FButtonImageIndexes: TExtButtonImageIndexes;
+    FButtonHints: TExtButtonHints;
+    FImagesWidth: TExtImagesWidth;
     FBorderColor: TColor;
 
     FDragging: Boolean;
@@ -217,7 +217,7 @@ type
     FMouseDownPos: TPoint;
     FMouseDownIndex: Integer;
 
-    FTabPosition: TTabPosition;
+    FTabPosition: TExtTabPosition;
     FOnTabCreating: TTabCreatingEvent;
     FOnTabCreated: TNotifyEvent;
     FOnTabDeleting: TTabIndexAllowEvent;
@@ -263,13 +263,13 @@ type
     procedure AddBtnPaint(Sender: TObject);
     procedure ScrollBtnPaint(Sender: TObject);
 
-    procedure SetTabStyle(AValue: TTabStyle);
-    procedure SetTabPosition(AValue: TTabPosition);
+    procedure SetTabStyle(AValue: TExtTabStyle);
+    procedure SetTabPosition(AValue: TExtTabPosition);
     procedure SetTabOptions(AValue: TExtTabOptions);
     procedure SetImages(AValue: TCustomImageList);
-    procedure SetButtonImageIndexes(AValue: TButtonImageIndexes);
-    procedure SetButtonHints(AValue: TButtonHints);
-    procedure SetImagesWidth(AValue: TImagesWidth);
+    procedure SetButtonImageIndexes(AValue: TExtButtonImageIndexes);
+    procedure SetButtonHints(AValue: TExtButtonHints);
+    procedure SetImagesWidth(AValue: TExtImagesWidth);
     procedure SetBorderColor(AValue: TColor);
     procedure SetTabs(AValue: TExtTabs);
     procedure SetMinCaptionLen(AValue: Integer);
@@ -390,12 +390,12 @@ type
     property Tabs: TExtTabs read FTabs write SetTabs;
     property TabIndex: Integer read FTabIndex write SetTabIndex default -1;
     property TabSize: Integer read FTabSize write SetTabSize stored IsStoredTabSize;
-    property TabStyle: TTabStyle read FTabStyle write SetTabStyle default tsFlat;
+    property TabStyle: TExtTabStyle read FTabStyle write SetTabStyle default etsFlat;
     property TabOptions: TExtTabOptions read FTabOptions write SetTabOptions
-                           default [toActivateNewTab, toShowCloseButton,
-                                    toShowAddButton, toCloseOnMiddleClick,
-                                    toAllowDragReorder, toGetFocus, toShowFocusRect];
-    property TabPosition: TTabPosition read FTabPosition write SetTabPosition default tpTop;
+                           default [etoActivateNewTab, etoShowCloseButton,
+                                    etoShowAddButton, etoCloseOnMiddleClick,
+                                    etoAllowDragReorder, etoGetFocus, etoShowFocusRect];
+    property TabPosition: TExtTabPosition read FTabPosition write SetTabPosition default etpTop;
 
     property ShowHint default True;
     property Font;
@@ -403,9 +403,9 @@ type
     property ParentColor;
 
     property Images: TCustomImageList read FImages write SetImages;
-    property ButtonImageIndexes: TButtonImageIndexes read FButtonImageIndexes write SetButtonImageIndexes;
-    property ImagesWidth: TImagesWidth read FImagesWidth write SetImagesWidth;
-    property ButtonHints: TButtonHints read FButtonHints write SetButtonHints;
+    property ButtonImageIndexes: TExtButtonImageIndexes read FButtonImageIndexes write SetButtonImageIndexes;
+    property ImagesWidth: TExtImagesWidth read FImagesWidth write SetImagesWidth;
+    property ButtonHints: TExtButtonHints read FButtonHints write SetButtonHints;
     property BorderColor: TColor read FBorderColor write SetBorderColor default clBtnShadow;
 
     property AddMenu: TPopupMenu read GetAddMenu write SetAddMenu;
@@ -433,28 +433,24 @@ type
     property OnDrawButton: TButtonDrawEvent read FOnDrawButton write SetOnDrawButton;
   end;
 
-procedure DrawBtnAdd(ACanvas: TCanvas; ARect: TRect);
-procedure DrawBtnScroll(ACanvas: TCanvas; ARect: TRect; ANext, AHorizontal: Boolean);
-procedure DrawBtnClose(ACanvas: TCanvas; ARect: TRect; IsHover: Boolean);
-
 implementation
 
 type
-  TPenState = record
+  TExtPenState = record
     Color: TColor;
     Width: Integer;
     Style: TPenStyle;
   end;
 
 { Global Helpers }
-function SavePen(ACanvas: TCanvas): TPenState;
+function SavePen(ACanvas: TCanvas): TExtPenState;
 begin
   Result.Color := ACanvas.Pen.Color;
   Result.Width := ACanvas.Pen.Width;
   Result.Style := ACanvas.Pen.Style;
 end;
 
-procedure RestorePen(ACanvas: TCanvas; const State: TPenState);
+procedure RestorePen(ACanvas: TCanvas; const State: TExtPenState);
 begin
   ACanvas.Pen.Color := State.Color;
   ACanvas.Pen.Width := State.Width;
@@ -537,7 +533,7 @@ procedure DrawBtnScroll(ACanvas: TCanvas; ARect: TRect; ANext, AHorizontal: Bool
 var
   ASize, CX, CY, R: Integer;
   P: array[0..2] of TPoint;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   SavedPen := SavePen(ACanvas);
 
@@ -596,7 +592,7 @@ procedure DrawBtnAdd(ACanvas: TCanvas; ARect: TRect);
 var
   ASize, CX, CY, L, W: Integer;
   P: array[0..11] of TPoint;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   SavedPen := SavePen(ACanvas);
 
@@ -643,7 +639,7 @@ var
   P: array[0..11] of TPoint;
   D, H, CX, CY: Integer;
   XClr: TColor;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   SavedPen := SavePen(ACanvas);
 
@@ -683,31 +679,31 @@ end;
 
 // End vector icon helpers
 
-{ TButtonImageIndexes }
-constructor TButtonImageIndexes.Create(AOwner: TExtTabCtrl);
+{ TExtButtonImageIndexes }
+constructor TExtButtonImageIndexes.Create(AOwner: TExtTabCtrl);
 begin
   FOwnerCtrl := AOwner;
   FillChar(FImgIndex, SizeOf(FImgIndex), $FF);
   FillChar(FSavedIndex, SizeOf(FSavedIndex), $FF);
 end;
 
-procedure TButtonImageIndexes.Assign(Source: TPersistent);
+procedure TExtButtonImageIndexes.Assign(Source: TPersistent);
 begin
-  if Source is TButtonImageIndexes then
+  if Source is TExtButtonImageIndexes then
   begin
-    FImgIndex := TButtonImageIndexes(Source).FImgIndex;
+    FImgIndex := TExtButtonImageIndexes(Source).FImgIndex;
     if Assigned(FOnChange) then FOnChange(Self);
   end
   else
     inherited Assign(Source);
 end;
 
-function TButtonImageIndexes.GetIndex(Index: Integer): TImageIndex;
+function TExtButtonImageIndexes.GetIndex(Index: Integer): TImageIndex;
 begin
   Result := FImgIndex[Index];
 end;
 
-procedure TButtonImageIndexes.Restore;
+procedure TExtButtonImageIndexes.Restore;
 var
   i: Integer;
 begin
@@ -715,7 +711,7 @@ begin
     FImgIndex[i] := FSavedIndex[i];
 end;
 
-procedure TButtonImageIndexes.Save;
+procedure TExtButtonImageIndexes.Save;
 var
   i: Integer;
 begin
@@ -723,7 +719,7 @@ begin
     FSavedIndex[i] := FImgIndex[i];
 end;
 
-procedure TButtonImageIndexes.SetIndex(Index: Integer; Value: TImageIndex);
+procedure TExtButtonImageIndexes.SetIndex(Index: Integer; Value: TImageIndex);
 begin
   if GetIndex(Index) <> Value then
   begin
@@ -732,13 +728,13 @@ begin
   end;
 end;
 
-function TButtonImageIndexes.GetOwner: TPersistent;
+function TExtButtonImageIndexes.GetOwner: TPersistent;
 begin
   Result := FOwnerCtrl;
 end;
 
-{ TButtonHints }
-procedure TButtonHints.SetAddHint(AValue: String);
+{ TExtButtonHints }
+procedure TExtButtonHints.SetAddHint(AValue: String);
 begin
   if FAddHint <> AValue then
   begin
@@ -747,7 +743,7 @@ begin
   end;
 end;
 
-procedure TButtonHints.SetScrollPrevHint(AValue: String);
+procedure TExtButtonHints.SetScrollPrevHint(AValue: String);
 begin
   if FScrollPrevHint <> AValue then
   begin
@@ -756,7 +752,7 @@ begin
   end;
 end;
 
-procedure TButtonHints.SetScrollNextHint(AValue: String);
+procedure TExtButtonHints.SetScrollNextHint(AValue: String);
 begin
   if FScrollNextHint <> AValue then
   begin
@@ -765,7 +761,7 @@ begin
   end;
 end;
 
-procedure TButtonHints.SetCloseHint(AValue: String);
+procedure TExtButtonHints.SetCloseHint(AValue: String);
 begin
   if FCloseHint <> AValue then
   begin
@@ -774,14 +770,14 @@ begin
   end;
 end;
 
-procedure TButtonHints.Assign(Source: TPersistent);
+procedure TExtButtonHints.Assign(Source: TPersistent);
 begin
-  if Source is TButtonHints then
+  if Source is TExtButtonHints then
   begin
-    FAddHint := TButtonHints(Source).AddHint;
-    FScrollPrevHint := TButtonHints(Source).ScrollPrevHint;
-    FScrollNextHint := TButtonHints(Source).ScrollNextHint;
-    FCloseHint := TButtonHints(Source).CloseHint;
+    FAddHint := TExtButtonHints(Source).AddHint;
+    FScrollPrevHint := TExtButtonHints(Source).ScrollPrevHint;
+    FScrollNextHint := TExtButtonHints(Source).ScrollNextHint;
+    FCloseHint := TExtButtonHints(Source).CloseHint;
 
     if Assigned(FOnChange) then FOnChange(Self);
   end
@@ -842,8 +838,8 @@ begin
     inherited Assign(Source);
 end;
 
-{ TImagesWidth }
-constructor TImagesWidth.Create;
+{ TExtImagesWidth }
+constructor TExtImagesWidth.Create;
 begin
   FPrevWidth := 0;
   FNextWidth := 0;
@@ -852,22 +848,22 @@ begin
   FTabWidth := 0;
 end;
 
-procedure TImagesWidth.Assign(Source: TPersistent);
+procedure TExtImagesWidth.Assign(Source: TPersistent);
 begin
-  if Source is TImagesWidth then
+  if Source is TExtImagesWidth then
   begin
-    FPrevWidth := TImagesWidth(Source).PrevWidth;
-    FNextWidth := TImagesWidth(Source).NextWidth;
-    FAddWidth := TImagesWidth(Source).AddWidth;
-    FCloseWidth := TImagesWidth(Source).CloseWidth;
-    FTabWidth := TImagesWidth(Source).TabsWidth;
+    FPrevWidth := TExtImagesWidth(Source).PrevWidth;
+    FNextWidth := TExtImagesWidth(Source).NextWidth;
+    FAddWidth := TExtImagesWidth(Source).AddWidth;
+    FCloseWidth := TExtImagesWidth(Source).CloseWidth;
+    FTabWidth := TExtImagesWidth(Source).TabsWidth;
     if Assigned(FOnChange) then FOnChange(Self);
   end
   else
     inherited Assign(Source);
 end;
 
-procedure TImagesWidth.SetWidth(Index, Value: Integer);
+procedure TExtImagesWidth.SetWidth(Index, Value: Integer);
 var
   Ptr: ^Integer;
 begin
@@ -945,7 +941,7 @@ begin
     FVisible := AValue;
     FOwnerCtrl.FTabIndex := Candidate;
 
-    if (toActiveBold in FOwnerCtrl.FTabOptions) or (toActiveItalic in FOwnerCtrl.FTabOptions) then
+    if (etoActiveBold in FOwnerCtrl.FTabOptions) or (etoActiveItalic in FOwnerCtrl.FTabOptions) then
     begin
       FOwnerCtrl.FTabs[OldIndex].FTextWidth := -1;
       if Candidate <> -1 then
@@ -1291,9 +1287,9 @@ begin
 
   BeginInternalChange;
   try
-    // If toActiveBold/Italic is on, the old and new active tabs are
+    // If etoActiveBold/Italic is on, the old and new active tabs are
     // measured with different font styles
-    if (toActiveBold in FTabOptions) or (toActiveItalic in FTabOptions) then
+    if (etoActiveBold in FTabOptions) or (etoActiveItalic in FTabOptions) then
     begin
       if (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
       begin
@@ -1430,7 +1426,7 @@ var
   ImgRes: TScaledImageListResolution;
   ppi, scale: Integer;
   Skip: Boolean;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   Btn := TSpeedButton(Sender);
 
@@ -1448,7 +1444,7 @@ begin
     Skip := False;
     SavedPen := SavePen(Btn.Canvas);
     try
-      FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, btAdd, nil, False, False, Skip);
+      FOnDrawButton(Self, Btn.Canvas, Btn.ClientRect, ebtAdd, nil, False, False, Skip);
     finally
       RestorePen(Btn.Canvas, SavedPen);
     end;
@@ -1466,13 +1462,13 @@ var
   ppi, scale: Integer;
   IsNext: Boolean;
   ImgIndex: Integer;
-  BtnType: TButtonType;
+  BtnType: TExtButtonType;
   Skip: Boolean;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   Btn := TSpeedButton(Sender);
   IsNext := (Btn = FBtnScrollNext);
-  if IsNext then BtnType := btNext else BtnType := btPrev;
+  if IsNext then BtnType := ebtNext else BtnType := ebtPrev;
   ImgIndex := IfThen(IsNext, FButtonImageIndexes.ScrollNextIndex, FButtonImageIndexes.ScrollPrevIndex);
 
   // Draw Image from List if available
@@ -1500,7 +1496,7 @@ begin
     DrawBtnScroll(Btn.Canvas, Btn.ClientRect, IsNext, IsHorizontal);
 end;
 
-procedure TExtTabCtrl.SetTabStyle(AValue: TTabStyle);
+procedure TExtTabCtrl.SetTabStyle(AValue: TExtTabStyle);
 begin
   if FTabStyle <> AValue then
   begin
@@ -1509,15 +1505,15 @@ begin
   end;
 end;
 
-procedure TExtTabCtrl.SetTabPosition(AValue: TTabPosition);
+procedure TExtTabCtrl.SetTabPosition(AValue: TExtTabPosition);
 var
   WasVertical, WillBeVertical: Boolean;
   W, H: Integer;
 begin
   if FTabPosition <> AValue then
   begin
-    WasVertical := FTabPosition in [tpLeft, tpRight];
-    WillBeVertical := AValue in [tpLeft, tpRight];
+    WasVertical := FTabPosition in [etpLeft, etpRight];
+    WillBeVertical := AValue in [etpLeft, etpRight];
 
     BeginUpdate;
     try
@@ -1557,12 +1553,12 @@ var
   tabChanged: Boolean;
 begin
   if FTabOptions = AValue then Exit;
-  tabChanged := ([toRotateTabImages]*AValue <> [toRotateTabImages]*FTabOptions) or
-                ([toRotateAddImage]*AValue <> [toRotateAddImage]*FTabOptions);
+  tabChanged := ([etoRotateTabImages]*AValue <> [etoRotateTabImages]*FTabOptions) or
+                ([etoRotateAddImage]*AValue <> [etoRotateAddImage]*FTabOptions);
   FTabOptions := AValue;
   FLayoutDirty := True;
 
-  // toActiveBold/Italic affects text measurements, reset all caches
+  // etoActiveBold/Italic affects text measurements, reset all caches
   for i := 0 to FTabs.Count - 1 do
   begin
     FTabs[i].FTextWidth := -1;
@@ -1594,12 +1590,12 @@ begin
   end;
 end;
 
-procedure TExtTabCtrl.SetButtonImageIndexes(AValue: TButtonImageIndexes);
+procedure TExtTabCtrl.SetButtonImageIndexes(AValue: TExtButtonImageIndexes);
 begin
   FButtonImageIndexes.Assign(AValue);
 end;
 
-procedure TExtTabCtrl.SetImagesWidth(AValue: TImagesWidth);
+procedure TExtTabCtrl.SetImagesWidth(AValue: TExtImagesWidth);
 begin
   FImagesWidth.Assign(AValue);
 end;
@@ -1643,7 +1639,7 @@ begin
   InvalidateLayout;
 end;
 
-procedure TExtTabCtrl.SetButtonHints(AValue: TButtonHints);
+procedure TExtTabCtrl.SetButtonHints(AValue: TExtButtonHints);
 begin
   FButtonHints.Assign(AValue);
 
@@ -1731,10 +1727,10 @@ begin
   Spacing := GetScale(cContentIndent);
 
   case FTabPosition of
-    tpTop: Result.Bottom := Result.Top + FTabSize;
-    tpBottom: Result.Top := Result.Bottom - FTabSize;
-    tpLeft: Result.Right := Result.Left + FTabSize;
-    tpRight: Result.Left := Result.Right - FTabSize;
+    etpTop: Result.Bottom := Result.Top + FTabSize;
+    etpBottom: Result.Top := Result.Bottom - FTabSize;
+    etpLeft: Result.Right := Result.Left + FTabSize;
+    etpRight: Result.Left := Result.Right - FTabSize;
   end;
 
   NeedsSpacing := False;
@@ -1792,7 +1788,7 @@ begin
   end
   else
   begin
-    ShowAdd := toShowAddButton in FTabOptions;
+    ShowAdd := etoShowAddButton in FTabOptions;
     ShowPrev := FScrollOffset > 0;
 
     ViewNoNext := TabsViewportRect(ShowPrev, False, ShowAdd);
@@ -1825,7 +1821,7 @@ begin
   AddH := GetIconExtent(FButtonImageIndexes.AddIndex, FImagesWidth.AddWidth, False);
 
   // The Add button is always visible at design time
-  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  ShowAdd := (etoShowAddButton in FTabOptions) or (csDesigning in ComponentState);
   FBtnAdd.Visible := ShowAdd;
 
   BtnThick := Max(1, FTabSize - 1);
@@ -1834,13 +1830,13 @@ begin
   if IsHorizontal then
   begin
     // Scroll-Prev: left edge, full strip height
-    if (FTabPosition = tpTop) then
+    if (FTabPosition = etpTop) then
       FBtnScrollPrev.Anchors := [akLeft, akTop]
     else
       FBtnScrollPrev.Anchors := [akLeft, akBottom];
     FBtnScrollPrev.AnchorSide[akLeft].Control := Self;
     FBtnScrollPrev.AnchorSide[akLeft].Side := asrLeft;
-    if (FTabPosition = tpTop) then
+    if (FTabPosition = etpTop) then
     begin
       FBtnScrollPrev.AnchorSide[akTop].Control := Self;
       FBtnScrollPrev.AnchorSide[akTop].Side := asrTop;
@@ -1859,13 +1855,13 @@ begin
     FBtnScrollPrev.SetBounds(0, 0, ScrollPrevW, BtnThick);
 
     // Add: right edge, full strip height
-    if (FTabPosition = tpTop) then
+    if (FTabPosition = etpTop) then
       FBtnAdd.Anchors := [akRight, akTop]
     else
       FBtnAdd.Anchors := [akRight, akBottom];
     FBtnAdd.AnchorSide[akRight].Control := Self;
     FBtnAdd.AnchorSide[akRight].Side := asrRight;
-    if (FTabPosition = tpTop) then
+    if (FTabPosition = etpTop) then
     begin
       FBtnAdd.AnchorSide[akTop].Control := Self;
       FBtnAdd.AnchorSide[akTop].Side := asrTop;
@@ -1884,7 +1880,7 @@ begin
     FBtnAdd.SetBounds(0, 0, AddW, BtnThick);
 
     // Scroll-Next: just left of Add, full strip height
-    if (FTabPosition = tpTop) then
+    if (FTabPosition = etpTop) then
     begin
       FBtnScrollNext.AnchorSide[akTop].Control := Self;
       FBtnScrollNext.AnchorSide[akTop].Side := asrTop;
@@ -1918,13 +1914,13 @@ begin
   // Vertical orientation
   begin
     // Scroll-Prev: top of the strip, full strip width
-    if (FTabPosition = tpLeft) then
+    if (FTabPosition = etpLeft) then
       FBtnScrollPrev.Anchors := [akLeft, akTop]
     else
       FBtnScrollPrev.Anchors := [akRight, akTop];
     FBtnScrollPrev.AnchorSide[akTop].Control := Self;
     FBtnScrollPrev.AnchorSide[akTop].Side := asrTop;
-    if (FTabPosition = tpLeft) then
+    if (FTabPosition = etpLeft) then
     begin
       FBtnScrollPrev.AnchorSide[akLeft].Control := Self;
       FBtnScrollPrev.AnchorSide[akLeft].Side := asrLeft;
@@ -1941,13 +1937,13 @@ begin
     FBtnScrollPrev.SetBounds(0, 0, BtnThick, ScrollPrevH);
 
     // Add: bottom of the strip, full strip width
-    if (FTabPosition = tpLeft) then
+    if (FTabPosition = etpLeft) then
       FBtnAdd.Anchors := [akLeft, akBottom]
     else
       FBtnAdd.Anchors := [akRight, akBottom];
     FBtnAdd.AnchorSide[akBottom].Control := Self;
     FBtnAdd.AnchorSide[akBottom].Side := asrBottom;
-    if (FTabPosition = tpLeft) then
+    if (FTabPosition = etpLeft) then
     begin
       FBtnAdd.AnchorSide[akLeft].Control := Self;
       FBtnAdd.AnchorSide[akLeft].Side := asrLeft;
@@ -1964,7 +1960,7 @@ begin
     FBtnAdd.SetBounds(0, 0, BtnThick, AddH + 2*imgBorder);
 
     // Scroll-Next: just above Add, full strip width
-    if (FTabPosition = tpLeft) then
+    if (FTabPosition = etpLeft) then
     begin
       FBtnScrollNext.AnchorSide[akLeft].Control := Self;
       FBtnScrollNext.AnchorSide[akLeft].Side := asrLeft;
@@ -1998,7 +1994,7 @@ end;
 
 function TExtTabCtrl.IsVertical: Boolean;
 begin
-  Result := FTabPosition in [tpLeft, tpRight];
+  Result := FTabPosition in [etpLeft, etpRight];
 end;
 
 function TExtTabCtrl.IsHorizontal: Boolean;
@@ -2060,15 +2056,15 @@ begin
     Result.Left := (Tab.FBoundRect.Width - CloseW) div 2;
     Result.Right := Result.Left + CloseW;
 
-    if FTabPosition = tpLeft then
+    if FTabPosition = etpLeft then
     begin
-      // tpLeft: Close button at the top
+      // etpLeft: Close button at the top
       Result.Top := M;
       Result.Bottom := M + CloseH;
     end
     else
     begin
-      // tpRight: Close button at the bottom
+      // etpRight: Close button at the bottom
       Result.Bottom := Tab.FBoundRect.Height - (M + GetScale(cTabOverlap));
       Result.Top := Result.Bottom - CloseH;
     end;
@@ -2115,7 +2111,7 @@ begin
   CalcLayout;
 
   R := FTabs[Index].FBoundRect;
-  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  ShowAdd := (etoShowAddButton in FTabOptions) or (csDesigning in ComponentState);
   ShowPrev := csDesigning in ComponentState;
   ShowNext := csDesigning in ComponentState;
   TotalSize := FTotalTabsSize;
@@ -2230,7 +2226,7 @@ var
 begin
   if (FUpdateCount > 0) or not HandleAllocated then Exit;
 
-  ShowAdd := (toShowAddButton in FTabOptions) or (csDesigning in ComponentState);
+  ShowAdd := (etoShowAddButton in FTabOptions) or (csDesigning in ComponentState);
   ShowPrev := csDesigning in ComponentState;
   ShowNext := csDesigning in ComponentState;
   ViewNoButtons := TabsViewportRect(ShowPrev, ShowNext, ShowAdd);
@@ -2297,8 +2293,8 @@ begin
   if IsActive then
   begin
     ActiveExtra := [];
-    if toActiveBold in FTabOptions then Include(ActiveExtra, fsBold);
-    if toActiveItalic in FTabOptions then Include(ActiveExtra, fsItalic);
+    if etoActiveBold in FTabOptions then Include(ActiveExtra, fsBold);
+    if etoActiveItalic in FTabOptions then Include(ActiveExtra, fsItalic);
     if ActiveExtra <> [] then
       ACanvas.Font.Style := ACanvas.Font.Style + ActiveExtra;
   end;
@@ -2322,7 +2318,7 @@ begin
     else
       // Vertical logic: adjust Y based on whether it's tpLeft or tpRight
       ImgPos := Point(R.Left + (R.Width - ImgW) div 2,
-                  IfThen(FTabPosition = tpLeft, TextRect.Bottom + GetScale(cImageSpacing),
+                  IfThen(FTabPosition = etpLeft, TextRect.Bottom + GetScale(cImageSpacing),
                                                 TextRect.Top - GetScale(cImageSpacing) - ImgH));
 
     DrawTabImage(ACanvas, Tab, ImgPos.X, ImgPos.Y);
@@ -2373,8 +2369,8 @@ end;
 function TExtTabCtrl.GetRotationForPosition: Integer;
 begin
   case FTabPosition of
-    tpLeft: Result := 90;
-    tpRight: Result := 270;
+    etpLeft: Result := 90;
+    etpRight: Result := 270;
     else Result := 0;
   end;
 end;
@@ -2439,7 +2435,7 @@ begin
       Inc(TxtRect.Left, GetTabImageWidth(Tab) + Spacing);
 
     // Account for Close Button
-    if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
+    if (etoShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
       Dec(TxtRect.Right, CloseExtend + Indent);
 
     Result.Left := TxtRect.Left + (TxtRect.Width - TextSize.cx) div 2;
@@ -2449,27 +2445,27 @@ begin
   end
   else
   begin
-    if (toShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
+    if (etoShowCloseButton in FTabOptions) and Tab.ShowCloseButton then
     begin
-      if FTabPosition = tpLeft then
+      if FTabPosition = etpLeft then
         Inc(TxtRect.Top, CloseExtend + Indent)
       else
         Dec(TxtRect.Bottom, CloseExtend + Indent);
     end;
 
     CX := (TxtRect.Left + TxtRect.Right) div 2;
-    if FTabPosition = tpLeft then CY := TxtRect.Bottom else CY := TxtRect.Top;
+    if FTabPosition = etpLeft then CY := TxtRect.Bottom else CY := TxtRect.Top;
 
     if HasAnyImage(Tab) then
     begin
       ImgH := GetTabImageHeight(Tab);
-      if FTabPosition = tpLeft then
+      if FTabPosition = etpLeft then
         CY := TxtRect.Bottom - ImgH - Spacing
       else
         CY := TxtRect.Top + ImgH + Spacing;
     end;
 
-    if FTabPosition = tpLeft then
+    if FTabPosition = etpLeft then
     begin
       // 90°: TextOut anchor is Bottom-Left
       Result.Left := CX - (TextSize.cy div 2);
@@ -2508,9 +2504,9 @@ var
   effect: TGraphicsDrawEffect;
   IsHover: Boolean;
   Skip: Boolean;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
-  if not (toShowCloseButton in FTabOptions) or not Tab.ShowCloseButton then Exit;
+  if not (etoShowCloseButton in FTabOptions) or not Tab.ShowCloseButton then Exit;
 
   ppi := Font.PixelsPerInch;
   CloseR := CloseButtonRect(Tab);
@@ -2536,7 +2532,7 @@ begin
     Skip := False;
     SavedPen := SavePen(ACanvas);
     try
-      FOnDrawButton(Self, ACanvas, CloseR, btClose, Tab, IsActive, IsHover, Skip);
+      FOnDrawButton(Self, ACanvas, CloseR, ebtClose, Tab, IsActive, IsHover, Skip);
     finally
       RestorePen(ACanvas, SavedPen);
     end;
@@ -2563,10 +2559,10 @@ begin
     Indent := 0;
 
   case FTabPosition of
-    tpTop: IndicatorRect := Rect(R.Left + Indent, R.Top + 1, R.Right - Indent, R.Top + 1 + Thick);
-    tpBottom: IndicatorRect := Rect(R.Left + Indent, R.Bottom - 1 - Thick, R.Right - Indent, R.Bottom - 1);
-    tpLeft: IndicatorRect := Rect(R.Left + 1, R.Top + Indent, R.Left + 1 + Thick, R.Bottom - Indent);
-    tpRight: IndicatorRect := Rect(R.Right - 1 - Thick, R.Top + Indent, R.Right - 1, R.Bottom - Indent);
+    etpTop: IndicatorRect := Rect(R.Left + Indent, R.Top + 1, R.Right - Indent, R.Top + 1 + Thick);
+    etpBottom: IndicatorRect := Rect(R.Left + Indent, R.Bottom - 1 - Thick, R.Right - Indent, R.Bottom - 1);
+    etpLeft: IndicatorRect := Rect(R.Left + 1, R.Top + Indent, R.Left + 1 + Thick, R.Bottom - Indent);
+    etpRight: IndicatorRect := Rect(R.Right - 1 - Thick, R.Top + Indent, R.Right - 1, R.Bottom - Indent);
   end;
 
   ACanvas.FillRect(IndicatorRect);
@@ -2609,25 +2605,25 @@ begin
   // Border Logic
   ACanvas.Pen.Color := FBorderColor;
   case FTabPosition of
-    tpTop: begin
+    etpTop: begin
       P[0] := Point(R.Left, R.Bottom - 1);
       P[1] := Point(R.Left, R.Top);
       P[2] := Point(R.Right - 1, R.Top);
       P[3] := Point(R.Right - 1, R.Bottom - 1);
     end;
-    tpBottom: begin
+    etpBottom: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Left, R.Bottom - 1);
       P[2] := Point(R.Right - 1, R.Bottom - 1);
       P[3] := Point(R.Right - 1, R.Top);
     end;
-    tpLeft: begin
+    etpLeft: begin
       P[0] := Point(R.Right - 1, R.Top);
       P[1] := Point(R.Left, R.Top);
       P[2] := Point(R.Left, R.Bottom - 1);
       P[3] := Point(R.Right - 1, R.Bottom - 1);
     end;
-    tpRight: begin
+    etpRight: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Right - 1, R.Top);
       P[2] := Point(R.Right - 1, R.Bottom - 1);
@@ -2739,25 +2735,25 @@ begin
 
   // Define Polygon Points for the tab body
   case FTabPosition of
-    tpTop: begin
+    etpTop: begin
       P[0] := Point(R.Left, R.Bottom);
       P[1] := Point(R.Left + S, R.Top);
       P[2] := Point(R.Right - 1 - S, R.Top);
       P[3] := Point(R.Right - 1, R.Bottom);
     end;
-    tpBottom: begin
+    etpBottom: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Left + S, R.Bottom - 1);
       P[2] := Point(R.Right - 1 - S, R.Bottom - 1);
       P[3] := Point(R.Right - 1, R.Top);
     end;
-    tpLeft: begin
+    etpLeft: begin
       P[0] := Point(R.Right, R.Top);
       P[1] := Point(R.Left, R.Top + S);
       P[2] := Point(R.Left, R.Bottom - 1 - S);
       P[3] := Point(R.Right, R.Bottom - 1);
     end;
-    tpRight: begin
+    etpRight: begin
       P[0] := Point(R.Left, R.Top);
       P[1] := Point(R.Right - 1, R.Top + S);
       P[2] := Point(R.Right - 1, R.Bottom - 1 - S);
@@ -2779,10 +2775,10 @@ begin
     // Draw the shadow line for all the inactive tabs on the side touching the body
     ACanvas.Pen.Color := FBorderColor;
     case FTabPosition of
-      tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
-      tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
-      tpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
-      tpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
+      etpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
+      etpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
+      etpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
+      etpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
     end;
   end;
 end;
@@ -2842,13 +2838,13 @@ begin
   begin
     ACanvas.Pen.Color := FBorderColor;
     case FTabPosition of
-      tpTop:
+      etpTop:
         ACanvas.RoundRect(R.Left, R.Top, R.Right - 1, R.Bottom + Radius, Radius, Radius);
-      tpBottom:
+      etpBottom:
         ACanvas.RoundRect(R.Left, R.Top - Radius, R.Right - 1, R.Bottom, Radius, Radius);
-      tpLeft:
+      etpLeft:
         ACanvas.RoundRect(R.Left, R.Top, R.Right + Radius, R.Bottom - 1, Radius, Radius);
-      tpRight:
+      etpRight:
         ACanvas.RoundRect(R.Left - Radius, R.Top, R.Right, R.Bottom - 1, Radius, Radius);
     end;
   end;
@@ -2856,10 +2852,10 @@ begin
   // Draw the shadow line for all but the active tab on the side touching the body
   ACanvas.Pen.Color := IfThen(IsActive, BaseClr, FBorderColor);
   case FTabPosition of
-    tpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
-    tpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
-    tpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
-    tpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
+    etpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
+    etpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
+    etpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
+    etpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
   end;
 
   // Separators (For inactive non-hovered tabs without their own color border)
@@ -2884,10 +2880,10 @@ begin
     InflateRect(StripeBounds, -GetScale(5), -GetScale(5));
 
     case FTabPosition of
-      tpTop: ACanvas.Line(StripeBounds.Left, R.Top + 1, StripeBounds.Right, R.Top + 1);
-      tpBottom: ACanvas.Line(StripeBounds.Left, R.Bottom - 2, StripeBounds.Right, R.Bottom - 2);
-      tpLeft: ACanvas.Line(R.Left + 1, StripeBounds.Top, R.Left + 1, StripeBounds.Bottom);
-      tpRight: ACanvas.Line(R.Right - 2, StripeBounds.Top, R.Right - 2, StripeBounds.Bottom);
+      etpTop: ACanvas.Line(StripeBounds.Left, R.Top + 1, StripeBounds.Right, R.Top + 1);
+      etpBottom: ACanvas.Line(StripeBounds.Left, R.Bottom - 2, StripeBounds.Right, R.Bottom - 2);
+      etpLeft: ACanvas.Line(R.Left + 1, StripeBounds.Top, R.Left + 1, StripeBounds.Bottom);
+      etpRight: ACanvas.Line(R.Right - 2, StripeBounds.Top, R.Right - 2, StripeBounds.Bottom);
     end;
     ACanvas.Pen.Width := 1;
   end;
@@ -3006,14 +3002,14 @@ begin
   ACanvas.Pen.Width := 1;
   ACanvas.Pen.Style := psSolid;
 
-  if (FTabStyle = tsMacOS) then Exit;
+  if (FTabStyle = etsMacOS) then Exit;
 
   // Draw the full unbroken line
   case FTabPosition of
-    tpTop: ACanvas.Line(0, View.Bottom - 1, ClientWidth, View.Bottom - 1);
-    tpBottom: ACanvas.Line(0, View.Top, ClientWidth, View.Top);
-    tpLeft: ACanvas.Line(View.Right - 1, 0, View.Right - 1, ClientHeight);
-    tpRight: ACanvas.Line(View.Left, 0, View.Left, ClientHeight);
+    etpTop: ACanvas.Line(0, View.Bottom - 1, ClientWidth, View.Bottom - 1);
+    etpBottom: ACanvas.Line(0, View.Top, ClientWidth, View.Top);
+    etpLeft: ACanvas.Line(View.Right - 1, 0, View.Right - 1, ClientHeight);
+    etpRight: ACanvas.Line(View.Left, 0, View.Left, ClientHeight);
   end;
 end;
 
@@ -3024,7 +3020,7 @@ var
   Indent: Integer;
   Tab: TExtTab;
   TabRect: TRect;
-  SavedPen: TPenState;
+  SavedPen: TExtPenState;
 begin
   Tab := FTabs[Index];
   IsHover := (Index = FHoverTab);
@@ -3047,11 +3043,11 @@ begin
   else
   begin
     case FTabStyle of
-      tsButton: DrawButtonTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
-      tsDelphi: DrawDelphiTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
-      tsMacOS:  DrawMacOSTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
-      tsFlat:   DrawFlatTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
-      tsChrome: DrawChromeTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
+      etsButton: DrawButtonTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
+      etsDelphi: DrawDelphiTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
+      etsMacOS:  DrawMacOSTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
+      etsFlat:   DrawFlatTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
+      etsChrome: DrawChromeTab(ACanvas, TabRect, IsActive, Tab, FontColor, Indent);
     end;
   end;
 
@@ -3103,8 +3099,8 @@ begin
     if i = FTabIndex then
     begin
       ActiveExtra := [];
-      if toActiveBold in FTabOptions then Include(ActiveExtra, fsBold);
-      if toActiveItalic in FTabOptions then Include(ActiveExtra, fsItalic);
+      if etoActiveBold in FTabOptions then Include(ActiveExtra, fsBold);
+      if etoActiveItalic in FTabOptions then Include(ActiveExtra, fsItalic);
       if ActiveExtra <> [] then
         Canvas.Font.Style := Canvas.Font.Style + ActiveExtra;
     end;
@@ -3138,7 +3134,7 @@ begin
       ImgExtent := IfThen(IsHorizontal, ImgW, ImgH) + GetScale(cImageSpacing);
     end;
 
-    if (toShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton then
+    if (etoShowCloseButton in FTabOptions) and FTabs[i].ShowCloseButton then
       CloseExtent := GetIconExtent(FButtonImageIndexes.CloseIndex, FImagesWidth.CloseWidth, IsHorizontal) + GetScale(cContentIndent)
     else
       CloseExtent := 0;
@@ -3240,7 +3236,7 @@ begin
         Canvas.Pen.Width := 1;
       end;
 
-      if Focused and (toShowFocusRect in FTabOptions) and
+      if Focused and (etoShowFocusRect in FTabOptions) and
          (FTabIndex >= 0) and (FTabIndex < FTabs.Count) then
       begin
         R := FTabs[FTabIndex].FBoundRect;
@@ -3261,14 +3257,14 @@ begin
 
     if IsHorizontal then
     begin
-      if FTabPosition = tpTop then
+      if FTabPosition = etpTop then
       begin
         if View.Left > 0 then
           Canvas.FillRect(Rect(0, 0, View.Left, View.Bottom - 1));
         if View.Right < ClientWidth then
           Canvas.FillRect(Rect(View.Right, 0, ClientWidth, View.Bottom - 1));
       end
-      else // tpBottom
+      else // etpBottom
       begin
         if View.Left > 0 then
           Canvas.FillRect(Rect(0, View.Top + 1, View.Left, ClientHeight));
@@ -3278,14 +3274,14 @@ begin
     end
     else // IsVertical
     begin
-      if FTabPosition = tpLeft then
+      if FTabPosition = etpLeft then
       begin
         if View.Top > 0 then
           Canvas.FillRect(Rect(0, 0, View.Right - 1, View.Top));
         if View.Bottom < ClientHeight then
           Canvas.FillRect(Rect(0, View.Bottom, View.Right - 1, ClientHeight));
       end
-      else // tpRight
+      else // etpRight
       begin
         if View.Top > 0 then
           Canvas.FillRect(Rect(View.Left + 1, 0, ClientWidth, View.Top));
@@ -3387,7 +3383,7 @@ begin
   if Idx = -1 then Exit;
 
   // Close button click: only on left mouse button
-  if (Button = mbLeft) and (toShowCloseButton in FTabOptions) and
+  if (Button = mbLeft) and (etoShowCloseButton in FTabOptions) and
      FTabs[Idx].ShowCloseButton then
   begin
     View := TabsViewportRect;
@@ -3406,7 +3402,7 @@ begin
   end;
 
   // Middle click closes tab
-  if (Button = mbMiddle) and (toCloseOnMiddleClick in FTabOptions) then
+  if (Button = mbMiddle) and (etoCloseOnMiddleClick in FTabOptions) then
   begin
     DeleteTab(Idx);
     Exit;
@@ -3414,7 +3410,7 @@ begin
 
   if Button = mbLeft then
   begin
-    if toGetFocus in FTabOptions then SetFocus;
+    if etoGetFocus in FTabOptions then SetFocus;
     TabIndex := Idx;
   end;
 end;
@@ -3450,7 +3446,7 @@ begin
 
   // Is the mouse over the close "x" of the hovered tab?
   IsOverCloseBtn := False;
-  if (HoverNewTab <> -1) and (toShowCloseButton in FTabOptions) and
+  if (HoverNewTab <> -1) and (etoShowCloseButton in FTabOptions) and
      FTabs[HoverNewTab].ShowCloseButton then
   begin
     TabRect := FTabs[HoverNewTab].FBoundRect;
@@ -3525,7 +3521,7 @@ begin
 
     // Drag detection
     if (ssLeft in Shift) and (FMouseDownIndex <> -1) and
-      (toAllowDragReorder in FTabOptions) then
+      (etoAllowDragReorder in FTabOptions) then
     begin
       if (Abs(X - FMouseDownPos.X) > cDragThreshold) or
         (Abs(Y - FMouseDownPos.Y) > cDragThreshold) then
@@ -3670,7 +3666,7 @@ end;
 procedure TExtTabCtrl.WMLMGetDlgCode(var Message: TLMessage);
 begin
   // Only claim arrow keys when the control is allowed to hold focus
-  if toGetFocus in FTabOptions then
+  if etoGetFocus in FTabOptions then
     Message.Result := DLGC_WANTARROWS
   else
     Message.Result := 0;
@@ -3950,7 +3946,7 @@ begin
     // Defer layout: if inside BeginUpdate, CalcLayout will fire in EndUpdate
     InvalidateLayout;
 
-    if toActivateNewTab in FTabOptions then
+    if etoActivateNewTab in FTabOptions then
       NewIndex := Result.Index;
   finally
     EndInternalChange;
@@ -4015,7 +4011,7 @@ begin
   try
     FTabs.Delete(Index);
 
-    if ((toActiveBold in FTabOptions) or (toActiveItalic in FTabOptions)) and
+    if ((etoActiveBold in FTabOptions) or (etoActiveItalic in FTabOptions)) and
        (NewIndex >= 0) and (NewIndex < FTabs.Count) then
     begin
       FTabs[NewIndex].FTextWidth := -1;
@@ -4120,14 +4116,14 @@ begin
           R.GetBitmap(j, bmp[i]);
           if (j = FButtonImageIndexes.AddIndex) then
           begin
-            if (toRotateAddImage in FTabOptions) then
+            if (etoRotateAddImage in FTabOptions) then
               RotateImage(bmp[i], ARotation);
           end
           else
           if (j = FButtonImageIndexes.ScrollPrevIndex) or (j = FButtonImageIndexes.ScrollNextIndex) then
             RotateImage(bmp[i], 270)
           else
-          if toRotateTabImages in FTabOptions then
+          if etoRotateTabImages in FTabOptions then
             RotateImage(bmp[i], ARotation);
         end;
         FInternalImages.AddMultipleResolutions(bmp);
@@ -4158,23 +4154,23 @@ begin
   DoubleBuffered := True;
   FTabs := TExtTabs.Create(Self);
   FTabIndex := -1;
-  FTabStyle := tsFlat;
-  FTabPosition := tpTop;
+  FTabStyle := etsFlat;
+  FTabPosition := etpTop;
   FTabSize := Scale96ToFont(cDefaultTabSize);
-  FTabOptions := [toActivateNewTab, toShowCloseButton, toShowAddButton,
-                  toCloseOnMiddleClick, toAllowDragReorder, toGetFocus,
-                  toShowFocusRect];
+  FTabOptions := [etoActivateNewTab, etoShowCloseButton, etoShowAddButton,
+                  etoCloseOnMiddleClick, etoAllowDragReorder, etoGetFocus,
+                  etoShowFocusRect];
   FMinCaptionLen := 5;
   FMaxCaptionLen := 25;
 
   FInternalImages := TImageList.Create(self);
   FInternalImages.Scaled := true;
 
-  FButtonImageIndexes := TButtonImageIndexes.Create(Self);
+  FButtonImageIndexes := TExtButtonImageIndexes.Create(Self);
   FButtonImageIndexes.OnChange := @ButtonImagesChanged;
-  FButtonHints := TButtonHints.Create;
+  FButtonHints := TExtButtonHints.Create;
   FButtonHints.OnChange := @ButtonHintsChanged;
-  FImagesWidth := TImagesWidth.Create;
+  FImagesWidth := TExtImagesWidth.Create;
   FImagesWidth.OnChange := @ImagesWidthChanged;
   FBorderColor := clBtnShadow;
 

@@ -147,7 +147,7 @@ begin
 
   // Register visual dropdowns for the ImageIndex properties on Tabs and Buttons
   RegisterPropertyEditor(TypeInfo(TImageIndex), TExtTab, 'ImageIndex', TExtTabCtrlImageIndexProperty);
-  RegisterPropertyEditor(TypeInfo(TImageIndex), TButtonImageIndexes, '', TExtTabCtrlImageIndexProperty);
+  RegisterPropertyEditor(TypeInfo(TImageIndex), TExtButtonImageIndexes, '', TExtTabCtrlImageIndexProperty);
 end;
 
 { TTabIndexPropertyEditor }
@@ -205,8 +205,8 @@ begin
 
   if P is TExtTab then
     TC := TExtTabCtrl(TExtTab(P).GetOwner)
-  else if P is TButtonImageIndexes then
-    TC := TExtTabCtrl(TButtonImageIndexes(P).GetOwner)
+  else if P is TExtButtonImageIndexes then
+    TC := TExtTabCtrl(TExtButtonImageIndexes(P).GetOwner)
   else
     Exit;
 
