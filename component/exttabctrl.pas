@@ -441,6 +441,8 @@ type
     Color: TColor;
     Width: Integer;
     Style: TPenStyle;
+    BrushColor: TColor;
+    BrushStyle: TBrushStyle;
   end;
 
 { Global Helpers }
@@ -449,6 +451,8 @@ begin
   Result.Color := ACanvas.Pen.Color;
   Result.Width := ACanvas.Pen.Width;
   Result.Style := ACanvas.Pen.Style;
+  Result.BrushColor := ACanvas.Brush.Color;
+  Result.BrushStyle := ACanvas.Brush.Style;
 end;
 
 procedure RestorePen(ACanvas: TCanvas; const State: TExtPenState);
@@ -456,6 +460,8 @@ begin
   ACanvas.Pen.Color := State.Color;
   ACanvas.Pen.Width := State.Width;
   ACanvas.Pen.Style := State.Style;
+  ACanvas.Brush.Color := State.BrushColor;
+  ACanvas.Brush.Style := State.BrushStyle;
 end;
 
 procedure SwapIntegers(var A, B: Integer);
@@ -708,7 +714,7 @@ procedure TExtButtonImageIndexes.Restore;
 var
   i: Integer;
 begin
-  for i := Low(FImgIndex)to High(FImgIndex) do
+  for i := Low(FImgIndex) to High(FImgIndex) do
     FImgIndex[i] := FSavedIndex[i];
 end;
 
@@ -716,7 +722,7 @@ procedure TExtButtonImageIndexes.Save;
 var
   i: Integer;
 begin
-  for i := Low(FImgIndex)to High(FImgIndex) do
+  for i := Low(FImgIndex) to High(FImgIndex) do
     FSavedIndex[i] := FImgIndex[i];
 end;
 
@@ -1609,9 +1615,9 @@ end;
 
 procedure TExtTabCtrl.SetBorderColor(AValue: TColor);
 begin
-  if Avalue = FBorderColor then Exit;
+  if AValue = FBorderColor then Exit;
 
-  FBorderColor := Avalue;
+  FBorderColor := AValue;
   Invalidate;
 end;
 
@@ -2090,8 +2096,11 @@ begin
   P := ViewToContent(Point(X, Y), View);
 
   for i := 0 to FTabs.Count - 1 do
+  begin
+    if not FTabs[i].Visible then Continue;
     if PtInRect(FTabs[i].FBoundRect, P) then
-        Exit(i);
+      Exit(i);
+  end;
 end;
 
 function TExtTabCtrl.MaxScrollOffset: Integer;
@@ -3043,7 +3052,7 @@ begin
   Indent := 2;
   Skip := True;
 
-  // Use the custom draw event (if ssigned) or the built-in style
+  // Use the custom draw event (if assigned) or the built-in style
   if Assigned(FOnDrawTab) then
   begin
     SavedPen := SavePen(ACanvas);
@@ -3263,8 +3272,8 @@ begin
       RestoreDC(Canvas.Handle, ClipSaveIdx);
     end;
 
-    // Cocoa keeps drawing the tabs over the space reserved for buttons
-    // This is a hack to delete this, until I find the right solution
+    // {TODO} Cocoa keeps drawing the tabs over the space reserved for buttons
+    // This is a workaround until the root cause is identified and fixed
     {$IFDEF LCLCocoa}
     Canvas.Brush.Color := Color;
     Canvas.Brush.Style := bsSolid;
@@ -3395,6 +3404,9 @@ begin
   FMouseDownIndex := Idx;
 
   if Idx = -1 then Exit;
+
+  // Do not process close or middle-click deletes while a drag is in progress
+  if FDragging then Exit;
 
   // Close button click: only on left mouse button
   if (Button = mbLeft) and (etoShowCloseButton in FTabOptions) and
@@ -3647,10 +3659,15 @@ function TExtTabCtrl.DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
   MousePos: TPoint): Boolean;
 var
   Candidate: Integer;
+  LocalPos: TPoint;
 begin
   Result := inherited DoMouseWheel(Shift, WheelDelta, MousePos);
   if Result then Exit; // parent already handled it
   if FTabs.Count = 0 then Exit;
+
+  // Only consume the wheel event when the pointer is over the tab strip itself
+  LocalPos := ScreenToClient(MousePos);
+  if not PtInRect(TabsViewportRect, LocalPos) then Exit;
 
   if WheelDelta < 0 then
     Candidate := NextVisibleTab(FTabIndex)
@@ -3769,10 +3786,15 @@ end;
 procedure TExtTabCtrl.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
-  if (Operation = opRemove) and (AComponent = FImages) then
+  if Operation = opRemove then
   begin
-    FInternalImages.Clear;
-    FImages := nil;
+    if AComponent = FImages then
+    begin
+      FInternalImages.Clear;
+      FImages := nil;
+    end;
+    if Assigned(FBtnAdd) and (AComponent = FBtnAdd.PopupMenu) then
+      FBtnAdd.PopupMenu := nil;
   end;
 end;
 
@@ -4019,7 +4041,18 @@ begin
     if not Allow then Exit;
   end
   else if Index < FTabIndex then
+  begin
     Dec(NewIndex); // shift active index down
+    // Fire OnTabChanging so consumers tracking the active index are notified
+    Allow := True;
+    if Assigned(FOnTabChanging) then
+    begin
+      FOnTabChanging(Self, OldIndex, NewIndex, Allow);
+      if csDestroying in ComponentState then Exit;
+      if (Index < 0) or (Index >= FTabs.Count) then Exit;
+    end;
+    if not Allow then Exit;
+  end;
 
   BeginInternalChange;
   try
@@ -4071,7 +4104,10 @@ begin
   FImportActive := True;
   try
     if ClearExisting then
+    begin
       FTabs.Clear;
+      FAddTabCounter := 0;
+    end;
 
     for i := 0 to Source.Count - 1 do
     begin
