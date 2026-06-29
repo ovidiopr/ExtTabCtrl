@@ -81,10 +81,12 @@ begin
       if (TargetIndex >= 0) and (TargetIndex < TabControl.Tabs.Count) then
       begin
         CurrentTab := TabControl.Tabs[TargetIndex];
-        // DeletePersistent removes the node; DeleteTab is not needed
+        // Unregister from the designer first, then delete from the collection.
+        // Both steps are required: DeletePersistent cleans up the OI node,
+        // and DeleteTab frees the underlying TExtTab object and repaints.
         if Assigned(GlobalDesignHook) then
           GlobalDesignHook.DeletePersistent(TPersistent(CurrentTab));
-        //TabControl.DeleteTab(TargetIndex);
+        TabControl.DeleteTab(TargetIndex);
       end;
     end;
 

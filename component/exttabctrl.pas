@@ -5,8 +5,8 @@ unit ExtTabCtrl;
 interface
 
 uses
-  Classes, SysUtils, Controls, FPImage, GraphType, Graphics, Buttons, LCLType, Types, Math,
-  LResources, LCLIntf, GraphUtil, ImgList, LMessages, Forms, Menus,
+  Classes, SysUtils, Controls, FPImage, GraphType, Graphics, Buttons, LCLType,
+  Types, Math, LResources, LCLIntf, GraphUtil, ImgList, LMessages, Forms, Menus,
   IntfGraphics, LazMethodList{$IFDEF LCLDesign}, PropEdits{$ENDIF};
 
 type
@@ -249,10 +249,8 @@ type
 
     procedure BeginInternalChange;
     procedure EndInternalChange;
-    procedure NormalizeState;
     procedure CancelDrag;
 
-    procedure SetTabIndex(AValue: Integer);
     procedure SetTabSize(AValue: Integer);
     function IsStoredTabSize: Boolean;
     procedure AddBtnClick(Sender: TObject);
@@ -287,7 +285,6 @@ type
     procedure AnchorButtons;
     function GetDisplayCaption(Tab: TExtTab): String;
     function CloseButtonRect(Tab: TExtTab): TRect;
-    function TabAtPos(X, Y: Integer): Integer;
     function MaxScrollOffset: Integer;
     function AxisSize(const R: TRect): Integer;
     procedure GetAxisSpan(const R: TRect; out AStart, AEnd: Integer);
@@ -330,14 +327,17 @@ type
 
     procedure Paint; override;
     procedure Resize; override;
-    procedure CalcLayout;
+    procedure CalcLayout; virtual;
 
-    procedure DrawFlatTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
-    procedure DrawButtonTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
-    procedure DrawDelphiTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
-    procedure DrawChromeTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
-    procedure DrawMacOSTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer);
-    procedure DrawTab(ACanvas: TCanvas; Index: Integer; ARect: TRect; IsActive: Boolean);
+    procedure SetTabIndex(AValue: Integer); virtual;
+    procedure NormalizeState; virtual;
+
+    procedure DrawFlatTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer); virtual;
+    procedure DrawButtonTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer); virtual;
+    procedure DrawDelphiTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer); virtual;
+    procedure DrawChromeTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer); virtual;
+    procedure DrawMacOSTab(ACanvas: TCanvas; var R: TRect; IsActive: Boolean; Tab: TExtTab; var FontColor: TColor; var Indent: Integer); virtual;
+    procedure DrawTab(ACanvas: TCanvas; Index: Integer; ARect: TRect; IsActive: Boolean); virtual;
 
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
@@ -346,6 +346,8 @@ type
     function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
     procedure DblClick; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+
+    function TabAtPos(X, Y: Integer): Integer;
 
     procedure DoEnter; override;
     procedure DoExit; override;
@@ -361,24 +363,24 @@ type
     procedure CalculatePreferredSize(var PreferredWidth, PreferredHeight: Integer; WithImplicitConstraints: Boolean); override;
 
     procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy; const AXProportion, AYProportion: Double); override;
-    procedure PrepareInternalTabImages(ARotation: Integer);
-    procedure UpdateImages;
-    procedure UpdateBtnImages;
-    procedure UpdateTabSizeForImages;
+    procedure PrepareInternalTabImages(ARotation: Integer); virtual;
+    procedure UpdateImages; virtual;
+    procedure UpdateBtnImages; virtual;
+    procedure UpdateTabSizeForImages; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure BeginUpdate;
-    procedure EndUpdate;
+    procedure BeginUpdate; virtual;
+    procedure EndUpdate; virtual;
     function IsVertical: Boolean;
     function IsHorizontal: Boolean;
     procedure InvalidateLayout;
-    function NextVisibleTab(FromIndex: Integer): Integer;
-    function PrevVisibleTab(FromIndex: Integer): Integer;
-    function AddTab(const ACaption: String; AData: TObject = nil): TExtTab;
-    procedure DeleteTab(Index: Integer);
-    procedure ImportFromStrings(Source: TStrings; ClearExisting: Boolean = True);
-    procedure SetDesignTabIndex(AValue: Integer);
+    function NextVisibleTab(FromIndex: Integer): Integer; virtual;
+    function PrevVisibleTab(FromIndex: Integer): Integer; virtual;
+    function AddTab(const ACaption: String; AData: TObject = nil): TExtTab; virtual;
+    procedure DeleteTab(Index: Integer); virtual;
+    procedure ImportFromStrings(Source: TStrings; ClearExisting: Boolean = True); virtual;
+    procedure SetDesignTabIndex(AValue: Integer); virtual;
   published
     property Align;
     property AutoSize;
@@ -3326,6 +3328,11 @@ var
 begin
   if (csDesigning in ComponentState) and (Button in [mbLeft, mbRight]) then
   begin
+    {$IFDEF DARWIN}
+    if (Button = mbLeft) and (ssCtrl in Shift) then
+      Button := mbRight;
+    {$ENDIF}
+
     // Force the Object Inspector to instantly select this component
     {$IFDEF LCLDesign}
     if Assigned(GlobalDesignHook) then

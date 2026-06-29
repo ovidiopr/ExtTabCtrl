@@ -1,0 +1,51 @@
+object Form1: TForm1
+  Left = 696
+  Height = 240
+  Top = 294
+  Width = 320
+  Caption = 'Form1'
+  ClientHeight = 240
+  ClientWidth = 320
+  LCLVersion = '4.8.0.0'
+  object ExtPageCtrl1: TExtPageCtrl
+    Left = 0
+    Height = 240
+    Top = 0
+    Width = 320
+    Align = alClient
+    DoubleBuffered = True
+    Tabs = <    
+      item
+        Caption = 'New Page 1'
+      end    
+      item
+        Caption = 'New Page 2'
+      end>
+    TabIndex = 0
+    TabSize = 28
+    TabStyle = etsChrome
+    PageIndex = 0
+    object ExtPage1: TExtPage
+      Caption = 'ExtPage1'
+      object Button1: TButton
+        Left = 61
+        Height = 25
+        Top = 54
+        Width = 75
+        Caption = 'Button1'
+        TabOrder = 0
+      end
+    end
+    object ExtPage2: TExtPage
+      Caption = 'ExtPage2'
+      object ToggleBox1: TToggleBox
+        Left = 36
+        Height = 25
+        Top = 47
+        Width = 75
+        Caption = 'ToggleBox1'
+        TabOrder = 0
+      end
+    end
+  end
+end
