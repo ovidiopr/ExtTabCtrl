@@ -49,7 +49,7 @@
   <CompilerOptions>
     <Version Value="11"/>
     <Target>
-      <Filename Value="demo_ExtPageCtrl"/>
+      <Filename Value="bin/demo_ExtPageCtrl"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
