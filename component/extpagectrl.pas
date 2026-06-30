@@ -375,7 +375,7 @@ end;
 
 procedure TExtPageCtrl.LayoutPages;
 var
-  i: Integer;
+  i, B: Integer;
   P: TExtPage;
   R: TRect;
   TBT: Integer;
@@ -386,6 +386,10 @@ begin
   try
     R := ClientRect;
     TBT := TabSize;
+
+    // If the style draws a border, we must inset the page by 1 pixel
+    if TabStyle = etsMacOS then B := 0 else B := 1;
+
     for i := 0 to FPageList.Count - 1 do
     begin
       P := TExtPage(FPageList[i]);
@@ -395,10 +399,14 @@ begin
       begin
         // Active page assumes normal boundaries
         case TabPosition of
-          etpTop: P.SetBounds(R.Left, R.Top + TBT, R.Width, Max(0, R.Height - TBT));
-          etpBottom: P.SetBounds(R.Left, R.Top, R.Width, Max(0, R.Height - TBT));
-          etpLeft: P.SetBounds(R.Left + TBT, R.Top, Max(0, R.Width - TBT), R.Height);
-          etpRight: P.SetBounds(R.Left, R.Top, Max(0, R.Width - TBT), R.Height);
+          etpTop:
+            P.SetBounds(R.Left + B, R.Top + TBT, Max(0, R.Width - B*2), Max(0, R.Height - TBT - B));
+          etpBottom:
+            P.SetBounds(R.Left + B, R.Top + B, Max(0, R.Width - B*2), Max(0, R.Height - TBT - B));
+          etpLeft:
+            P.SetBounds(R.Left + TBT, R.Top + B, Max(0, R.Width - TBT - B), Max(0, R.Height - B*2));
+          etpRight:
+            P.SetBounds(R.Left + B, R.Top + B, Max(0, R.Width - TBT - B), Max(0, R.Height - B*2));
         end;
       end
       else // Push inactive pages out of the rendering area
