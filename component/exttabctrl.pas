@@ -2844,10 +2844,10 @@ begin
   // Draw the shadow line for all but the active tab on the side touching the body
   ACanvas.Pen.Color := IfThen(IsActive, BaseClr, FBorderColor);
   case FTabPosition of
-    etpTop: ACanvas.Line(R.Left, R.Bottom - 1, R.Right, R.Bottom - 1);
-    etpBottom: ACanvas.Line(R.Left, R.Top, R.Right, R.Top);
-    etpLeft: ACanvas.Line(R.Right - 1, R.Top, R.Right - 1, R.Bottom);
-    etpRight: ACanvas.Line(R.Left, R.Top, R.Left, R.Bottom);
+    etpTop: ACanvas.Line(R.Left + 1, R.Bottom - 1, R.Right - 1, R.Bottom - 1);
+    etpBottom: ACanvas.Line(R.Left + 1, R.Top, R.Right - 1, R.Top);
+    etpLeft: ACanvas.Line(R.Right - 1, R.Top + 1, R.Right - 1, R.Bottom - 1);
+    etpRight: ACanvas.Line(R.Left, R.Top + 1, R.Left, R.Bottom - 1);
   end;
 
   // Separators (For inactive non-hovered tabs without their own color border)
