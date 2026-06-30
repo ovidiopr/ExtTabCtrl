@@ -109,6 +109,7 @@ type
     procedure NormalizeState; override;
     procedure Loaded; override;
     procedure Resize; override;
+    procedure Paint; override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
 
     class function GetControlClassDefaultSize: TSize; override;
@@ -881,6 +882,47 @@ begin
   // Skip layout while a BeginUpdate/EndUpdate transaction is open
   if IsUpdating then Exit;
   LayoutPages;
+end;
+
+procedure TExtPageCtrl.Paint;
+var
+  R: TRect;
+begin
+  inherited Paint;
+
+  if TabStyle = etsMacOS then Exit;
+  if (not Assigned(Tabs)) or (Tabs.Count = 0) then Exit;
+
+  R := ClientRect;
+  case TabPosition of
+    etpTop: R.Top := R.Top + TabSize;
+    etpBottom: R.Bottom := R.Bottom - TabSize;
+    etpLeft: R.Left := R.Left + TabSize;
+    etpRight: R.Right := R.Right - TabSize;
+  end;
+
+  Canvas.Pen.Color := BorderColor;
+  Canvas.Pen.Width := 1;
+  Canvas.Pen.Style := psSolid;
+
+  case TabPosition of
+    etpTop:
+      // Strip line is the top edge; draw right, bottom, left
+      Canvas.Polyline([Point(R.Right - 1, R.Top), Point(R.Right - 1, R.Bottom - 1),
+                       Point(R.Left, R.Bottom - 1), Point(R.Left, R.Top)]);
+    etpBottom:
+      // Strip line is the bottom edge; draw left, top, right
+      Canvas.Polyline([Point(R.Left, R.Bottom - 1), Point(R.Left, R.Top),
+                       Point(R.Right - 1, R.Top), Point(R.Right - 1, R.Bottom - 1)]);
+    etpLeft:
+      // Strip line is the left edge; draw top, right, bottom
+      Canvas.Polyline([Point(R.Left, R.Top), Point(R.Right - 1, R.Top),
+                       Point(R.Right - 1, R.Bottom - 1), Point(R.Left, R.Bottom - 1)]);
+    etpRight:
+      // Strip line is the right edge; draw top, left, bottom
+      Canvas.Polyline([Point(R.Right - 1, R.Top), Point(R.Left, R.Top),
+                       Point(R.Left, R.Bottom - 1), Point(R.Right - 1, R.Bottom - 1)]);
+  end;
 end;
 
 procedure TExtPageCtrl.EndUpdate;
