@@ -124,6 +124,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
+    procedure EndUpdate; override;
+
     function AddPage(const ACaption: String): TExtPage; virtual;
     procedure DeletePage(Index: Integer); virtual;
     procedure MovePage(OldIndex, NewIndex: Integer); virtual;
@@ -517,17 +519,28 @@ begin
   CompOwner := Owner;
   if CompOwner = nil then CompOwner := Self;
 
-  NewPage := TExtPage.Create(CompOwner);
-  NewPage.FPageCtrl := Self;
-  NewPage.FTab := NewTab;
-  NewPage.Parent := Self;
-  NewPage.Visible := False;
-  NewPage.ControlStyle := NewPage.ControlStyle + [csNoDesignVisible];
+  // Roll back the tab we just created if page construction fails
+  try
+    NewPage := TExtPage.Create(CompOwner);
+    NewPage.FPageCtrl := Self;
+    NewPage.FTab := NewTab;
+    NewPage.Parent := Self;
+    NewPage.Visible := False;
+    NewPage.ControlStyle := NewPage.ControlStyle + [csNoDesignVisible];
 
-  NewTab.Caption := ACaption;
+    NewTab.Caption := ACaption;
 
-  if FPageList.IndexOf(NewPage) < 0 then
-    FPageList.Add(NewPage);
+    if FPageList.IndexOf(NewPage) < 0 then
+      FPageList.Add(NewPage);
+  except
+    FIsSyncing := True;
+    try
+      inherited DeleteTab(NewTab.Index);
+    finally
+      FIsSyncing := False;
+    end;
+    raise;
+  end;
 
   if (FPageList.Count = 1) and (TabIndex < 0) then
     SetPageIndex(0)
@@ -743,6 +756,8 @@ begin
     NewIdx := TabIndex;
     if NewIdx >= FPageList.Count then NewIdx := FPageList.Count - 1;
     SetPageIndex(NewIdx);
+
+    LayoutPages;
   finally
     FIsSyncing := False;
   end;
@@ -863,7 +878,17 @@ end;
 procedure TExtPageCtrl.Resize;
 begin
   inherited Resize;
+  // Skip layout while a BeginUpdate/EndUpdate transaction is open
+  if IsUpdating then Exit;
   LayoutPages;
+end;
+
+procedure TExtPageCtrl.EndUpdate;
+begin
+  inherited EndUpdate;
+
+  if not IsUpdating and Assigned(FPageList) then
+    LayoutPages;
 end;
 
 initialization

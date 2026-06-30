@@ -251,6 +251,8 @@ type
     procedure EndInternalChange;
     procedure CancelDrag;
 
+    function GetIsUpdating: Boolean;
+
     procedure SetTabSize(AValue: Integer);
     function IsStoredTabSize: Boolean;
     procedure AddBtnClick(Sender: TObject);
@@ -348,6 +350,8 @@ type
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
 
     function TabAtPos(X, Y: Integer): Integer;
+
+    property IsUpdating: Boolean read GetIsUpdating;
 
     procedure DoEnter; override;
     procedure DoExit; override;
@@ -3893,6 +3897,11 @@ begin
     AnchorButtons;
     UpdateTabSizeForImages;
   end;
+end;
+
+function TExtTabCtrl.GetIsUpdating: Boolean;
+begin
+  Result := FUpdateCount > 0;
 end;
 
 procedure TExtTabCtrl.BeginUpdate;
