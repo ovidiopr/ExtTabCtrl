@@ -92,7 +92,7 @@ var
 begin
   PC := PageCtrl;
   PC.Tabs[OldIdx].Index := NewIdx;
-  PC.TabIndex := NewIdx;
+  PC.PageIndex := NewIdx;
 
   Designer.Modified;
   if Assigned(GlobalDesignHook) then
@@ -131,7 +131,7 @@ var
   TargetIndex: Integer;
 begin
   PC := PageCtrl;
-  TargetIndex := PC.TabIndex;
+  TargetIndex := PC.PageIndex;
 
   case Index of
     0: // Add Page
@@ -165,10 +165,10 @@ begin
   end;
 end;
 
-{ TTabIndexPropertyEditor }
+{ TPageIndexPropertyEditor }
 
 type
-  TTabIndexPropertyEditor = class(TIntegerPropertyEditor)
+  TPageIndexPropertyEditor = class(TIntegerPropertyEditor)
   public
     function GetAttributes: TPropertyAttributes; override;
     function GetValue: String; override;
@@ -176,47 +176,47 @@ type
     procedure SetValue(const NewValue: String); override;
   end;
 
-function TTabIndexPropertyEditor.GetAttributes: TPropertyAttributes;
+function TPageIndexPropertyEditor.GetAttributes: TPropertyAttributes;
 begin
   Result := [paValueList, paRevertable];
 end;
 
-function TTabIndexPropertyEditor.GetValue: String;
+function TPageIndexPropertyEditor.GetValue: String;
 var
-  Ctrl: TExtTabCtrl;
+  Ctrl: TExtPageCtrl;
 begin
-  Ctrl := GetComponent(0) as TExtTabCtrl;
-  if Assigned(Ctrl) and (Ctrl.TabIndex >= 0) and (Ctrl.TabIndex < Ctrl.Tabs.Count) then
-    Result := IntToStr(Ctrl.TabIndex) + ' - ' + Ctrl.Tabs[Ctrl.TabIndex].Caption
+  Ctrl := GetComponent(0) as TExtPageCtrl;
+  if Assigned(Ctrl) and (Ctrl.PageIndex >= 0) and (Ctrl.PageIndex < Ctrl.Tabs.Count) then
+    Result := IntToStr(Ctrl.PageIndex) + ' - ' + Ctrl.Tabs[Ctrl.PageIndex].Caption
   else
     Result := IntToStr(GetOrdValue);
 end;
 
-procedure TTabIndexPropertyEditor.GetValues(Proc: TGetStrProc);
+procedure TPageIndexPropertyEditor.GetValues(Proc: TGetStrProc);
 var
-  Ctrl: TExtTabCtrl;
+  Ctrl: TExtPageCtrl;
   i: Integer;
 begin
-  Ctrl := GetComponent(0) as TExtTabCtrl;
+  Ctrl := GetComponent(0) as TExtPageCtrl;
   if not Assigned(Ctrl) then Exit;
   for i := 0 to Ctrl.Tabs.Count - 1 do
     Proc(IntToStr(i) + ' - ' + Ctrl.Tabs[i].Caption);
 end;
 
-procedure TTabIndexPropertyEditor.SetValue(const NewValue: String);
+procedure TPageIndexPropertyEditor.SetValue(const NewValue: String);
 var
-  Ctrl: TExtTabCtrl;
+  Ctrl: TExtPageCtrl;
   Idx: Integer;
   S: String;
 begin
-  Ctrl := GetComponent(0) as TExtTabCtrl;
+  Ctrl := GetComponent(0) as TExtPageCtrl;
   if not Assigned(Ctrl) then Exit;
   // Accept either a plain integer ("2") or the "2 - Caption" format
   S := Trim(NewValue);
   if Pos(' ', S) > 0 then
     S := Copy(S, 1, Pos(' ', S) - 1);
   Idx := StrToIntDef(S, -1);
-  Ctrl.SetDesignTabIndex(Idx);
+  Ctrl.PageIndex := Idx;
 end;
 
 { Registration }
@@ -227,7 +227,9 @@ begin
   RegisterNoIcon([TExtPage]);
   RegisterComponentEditor(TExtPageCtrl, TExtPageCtrlEditor);
 
-  RegisterPropertyEditor(TypeInfo(Integer), TExtPageCtrl, 'TabIndex', TTabIndexPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(Integer), TExtPageCtrl, 'PageIndex', TPageIndexPropertyEditor);
+  // Hide the inherited TabIndex property
+  RegisterPropertyEditor(TypeInfo(Integer), TExtPageCtrl, 'TabIndex', THiddenPropertyEditor);
 end;
 
 end.
