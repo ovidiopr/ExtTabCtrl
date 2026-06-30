@@ -41,10 +41,10 @@ object Form1: TForm1
       Caption = 'ExtPage1'
       object RadioGroup1: TRadioGroup
         Left = 0
-        Height = 240
+        Height = 99
         Top = 0
         Width = 326
-        Align = alClient
+        Align = alTop
         AutoFill = True
         AutoSize = True
         Caption = 'Tab Positions'
@@ -55,7 +55,7 @@ object Form1: TForm1
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 1
-        ClientHeight = 213
+        ClientHeight = 72
         ClientWidth = 316
         ItemIndex = 0
         Items.Strings = (
@@ -72,10 +72,10 @@ object Form1: TForm1
       Caption = 'ExtPage2'
       object RadioGroup2: TRadioGroup
         Left = 0
-        Height = 240
+        Height = 117
         Top = 0
         Width = 326
-        Align = alClient
+        Align = alTop
         AutoFill = True
         AutoSize = True
         Caption = 'Tab Style'
@@ -86,7 +86,7 @@ object Form1: TForm1
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 1
-        ClientHeight = 213
+        ClientHeight = 90
         ClientWidth = 316
         ItemIndex = 0
         Items.Strings = (
