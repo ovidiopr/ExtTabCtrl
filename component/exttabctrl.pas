@@ -2864,8 +2864,7 @@ begin
   // Accent line: use Tab.Color when set, otherwise fall back to clHighlight
   if IsActive and (Tab.StripeColor = clNone) then
   begin
-    ACanvas.Pen.Color := IfThen(Tab.Color <> clNone,
-      ResolveColor(Tab.Color), clHighlight);
+    ACanvas.Pen.Color := IfThen(Tab.Color <> clNone, ResolveColor(Tab.Color), clHighlight);
     ACanvas.Pen.Width := GetScale(3);
 
     StripeBounds := R;

@@ -238,8 +238,10 @@ end;
 
 function TExtPage.GetTabVisible: Boolean;
 begin
-  if Assigned(FTab) then Result := FTab.Visible
-  else                    Result := True;
+  if Assigned(FTab) then
+    Result := FTab.Visible
+  else
+    Result := True;
 end;
 
 procedure TExtPage.SetTabVisible(AValue: Boolean);
@@ -312,7 +314,7 @@ begin
   if (OwnerComp = nil) then OwnerComp := Self;
 
   BaseName := 'ExtPage';
-  Result := BaseName;
+  Result := BaseName + '1';
 
   i := 0;
   while True do
