@@ -10,6 +10,10 @@ uses
   {$IFDEF LCLDesign}, PropEdits{$ENDIF};
 
 type
+  TExtPage = class;
+
+  TBeforeShowExtPageEvent = procedure (ASender: TObject; ANewPage: TExtPage; ANewIndex: Integer) of object;
+
   TExtPageCtrl = class;
 
   TExtPage = class(TCustomControl)
@@ -24,6 +28,9 @@ type
     FImageIndex: TImageIndex;
     FPageHint: String;
     FShowCloseButton: Boolean;
+
+    FOnBeforeShow: TBeforeShowExtPageEvent;
+    function GetPageIndex: Integer;
 
     procedure SetStripeColor(AValue: TColor);
     procedure SetTabVisible(AValue: Boolean);
@@ -42,6 +49,7 @@ type
     destructor Destroy; override;
 
     property Tab: TExtTab read FTab;
+    property PageIndex: Integer read GetPageIndex;
   published
     property Left stored False;
     property Top stored False;
@@ -59,6 +67,8 @@ type
     property ImageIndex: TImageIndex read FImageIndex write SetImageIndex default -1;
     property PageHint: String read FPageHint write FPageHint;
     property ShowCloseButton: Boolean read FShowCloseButton write SetShowCloseButton default True;
+
+    property OnBeforeShow: TBeforeShowExtPageEvent read FOnBeforeShow write FOnBeforeShow;
 
     property Color;
     property BorderWidth;
@@ -173,7 +183,7 @@ begin
   inherited Create(AOwner);
   ControlStyle := ControlStyle + [csAcceptsControls, csDesignFixedBounds,
                                   csNoDesignVisible, csNoFocus];
-  Align := alNone;
+  Align := alClient;
   Visible := False;
   Caption := '';
   FStripeColor := clNone;
@@ -210,6 +220,14 @@ procedure TExtPage.CMColorChanged(var Message: TLMessage);
 begin
   inherited;
   if Assigned(FTab) then FTab.Color := Color;
+end;
+
+function TExtPage.GetPageIndex: Integer;
+begin
+  if Parent is TExtPageCtrl then
+    Result := TExtPageCtrl(Parent).FPageList.IndexOf(Self)
+  else
+    Result := -1;
 end;
 
 procedure TExtPage.SetStripeColor(AValue: TColor);
@@ -287,16 +305,28 @@ end;
 
 function TExtPageCtrl.GetUniquePageName: String;
 var
-  i: Integer;
-  CompOwner: TComponent;
+  i, j: Integer;
+  BaseName: String;
+  OwnerComp: TComponent;
 begin
-  CompOwner := Owner;
-  if CompOwner = nil then CompOwner := Self;
-  i := 1;
-  repeat
-    Result := 'ExtPage' + IntToStr(i);
+  OwnerComp := Owner;
+  if (OwnerComp = nil) then OwnerComp := Self;
+
+  BaseName := 'ExtPage';
+  Result := BaseName;
+
+  i := 0;
+  while True do
+  begin
+    j := OwnerComp.ComponentCount - 1;
+    while (j >= 0) and (CompareText(Result, OwnerComp.Components[j].Name) <> 0) do
+      Dec(j);
+    if j < 0 then Exit;
     Inc(i);
-  until CompOwner.FindComponent(Result) = nil;
+    if BaseName[Length(BaseName)] in ['0'..'9'] then
+      BaseName := BaseName + '_';
+    Result := BaseName + IntToStr(i);
+  end;
 end;
 
 function TExtPageCtrl.GetPage(Index: Integer): TExtPage;
@@ -342,9 +372,8 @@ begin
   // Push the old page to the back of the z-order
   if Assigned(OldPage) then
   begin
-    OldPage.SendToBack;
-    OldPage.Visible := False;
     OldPage.ControlStyle := OldPage.ControlStyle + [csNoDesignVisible];
+    OldPage.Visible := False;
   end;
 
   FPageIndex := AValue;
@@ -354,9 +383,11 @@ begin
   // Bring to front the new page
   if Assigned(NewPage) then
   begin
+    if Assigned(NewPage.FOnBeforeShow) then
+      NewPage.FOnBeforeShow(Self, NewPage, FPageIndex); // OnBeforeShow event
     NewPage.Visible := True;
     NewPage.ControlStyle := NewPage.ControlStyle - [csNoDesignVisible];
-    NewPage.BringToFront;
+    NewPage.Align := alClient;
   end;
 
   if not FIsSyncing then
@@ -387,16 +418,13 @@ end;
 
 procedure TExtPageCtrl.LayoutPages;
 var
-  i, B: Integer;
+  i, B, TBT: Integer;
   P: TExtPage;
-  R: TRect;
-  TBT: Integer;
 begin
   if FInLayout then Exit;
   if not Assigned(FPageList) then Exit;
   FInLayout := True;
   try
-    R := ClientRect;
     TBT := TabSize;
 
     // If the style draws a border, we must inset the page by 1 pixel
@@ -407,22 +435,11 @@ begin
       P := TExtPage(FPageList[i]);
       if P = nil then Continue;
 
-      if i = FPageIndex then
-      begin
-        // Active page assumes normal boundaries
-        case TabPosition of
-          etpTop:
-            P.SetBounds(R.Left + B, R.Top + TBT, Max(0, R.Width - B*2), Max(0, R.Height - TBT - B));
-          etpBottom:
-            P.SetBounds(R.Left + B, R.Top + B, Max(0, R.Width - B*2), Max(0, R.Height - TBT - B));
-          etpLeft:
-            P.SetBounds(R.Left + TBT, R.Top + B, Max(0, R.Width - TBT - B), Max(0, R.Height - B*2));
-          etpRight:
-            P.SetBounds(R.Left + B, R.Top + B, Max(0, R.Width - TBT - B), Max(0, R.Height - B*2));
-        end;
-      end
-      else // Push inactive pages out of the rendering area
-        P.SetBounds(-10000, -10000, 0, 0);
+      // Set page boundaries
+      P.BorderSpacing.Left := IfThen(TabPosition = etpLeft, TBT, B);
+      P.BorderSpacing.Top := IfThen(TabPosition = etpTop, TBT, B);
+      P.BorderSpacing.Right := IfThen(TabPosition = etpRight, TBT, B);
+      P.BorderSpacing.Bottom := IfThen(TabPosition = etpBottom, TBT, B);
     end;
   finally
     FInLayout := False;
@@ -524,7 +541,7 @@ function TExtPageCtrl.AddPage(const ACaption: String): TExtPage;
 var
   NewTab: TExtTab;
   NewPage: TExtPage;
-  CompOwner: TComponent;
+  OwnerComp: TComponent;
 begin
   Result := nil;
 
@@ -536,22 +553,26 @@ begin
   end;
   if NewTab = nil then Exit;
 
-  CompOwner := Owner;
-  if CompOwner = nil then CompOwner := Self;
+  OwnerComp := Owner;
+  if OwnerComp = nil then OwnerComp := Self;
 
   // Roll back the tab we just created if page construction fails
   try
-    NewPage := TExtPage.Create(CompOwner);
-    NewPage.FPageCtrl := Self;
-    NewPage.FTab := NewTab;
-    NewPage.Parent := Self;
-    NewPage.Visible := False;
-    NewPage.ControlStyle := NewPage.ControlStyle + [csNoDesignVisible];
-
-    NewPage.Caption := ACaption;
-
-    if FPageList.IndexOf(NewPage) < 0 then
+    FIsSyncing := True;
+    try
+      NewPage := TExtPage.Create(OwnerComp);
+      NewPage.FPageCtrl := Self;
       FPageList.Add(NewPage);
+      NewPage.Name := GetUniquePageName;
+      NewPage.Caption := ACaption;
+      NewPage.FTab := NewTab;
+      NewPage.Parent := Self;
+      NewPage.Align := alClient;
+      NewPage.Visible := False;
+      NewPage.ControlStyle := NewPage.ControlStyle + [csNoDesignVisible];
+    finally
+      FIsSyncing := False;
+    end;
   except
     FIsSyncing := True;
     try

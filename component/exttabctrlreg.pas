@@ -44,7 +44,7 @@ var
   TargetIndex: Integer;
   CurrentTab, NewTab: TExtTab;
 
-procedure RebuildDesignerTabTree(Ctrl: TExtTabCtrl; OldIdx, NewIdx: Integer);
+  procedure RebuildDesignerTabTree(Ctrl: TExtTabCtrl; OldIdx, NewIdx: Integer);
   begin
     // Move the tab in the collection
     Ctrl.Tabs[OldIdx].Index := NewIdx;
@@ -81,12 +81,10 @@ begin
       if (TargetIndex >= 0) and (TargetIndex < TabControl.Tabs.Count) then
       begin
         CurrentTab := TabControl.Tabs[TargetIndex];
-        // Unregister from the designer first, then delete from the collection.
-        // Both steps are required: DeletePersistent cleans up the OI node,
-        // and DeleteTab frees the underlying TExtTab object and repaints.
+        // DeletePersistent removes the node; DeleteTab is not needed
         if Assigned(GlobalDesignHook) then
           GlobalDesignHook.DeletePersistent(TPersistent(CurrentTab));
-        TabControl.DeleteTab(TargetIndex);
+        //TabControl.DeleteTab(TargetIndex);
       end;
     end;
 
@@ -183,15 +181,15 @@ end;
 procedure TTabIndexPropertyEditor.SetValue(const NewValue: String);
 var
   Ctrl: TExtTabCtrl;
-  Idx: Integer;
+  Idx, P: Integer;
   S: String;
 begin
   Ctrl := GetComponent(0) as TExtTabCtrl;
   if not Assigned(Ctrl) then Exit;
   // Accept either a plain integer ("2") or the "2 - Caption" format
   S := Trim(NewValue);
-  if Pos(' ', S) > 0 then
-    S := Copy(S, 1, Pos(' ', S) - 1);
+  P := Pos('-', S);
+  if P > 0 then S := Trim(Copy(S, 1, P - 1));
   Idx := StrToIntDef(S, -1);
   Ctrl.SetDesignTabIndex(Idx);
 end;
