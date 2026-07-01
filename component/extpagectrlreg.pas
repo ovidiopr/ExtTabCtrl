@@ -54,6 +54,7 @@ var
   PageControl: TExtPageCtrl;
   TargetIndex: Integer;
   CurrentPage, NewPage: TExtPage;
+  CurrentTab: TExtTab;
 
   procedure RebuildDesignerTabTree(Ctrl: TExtPageCtrl; OldIdx, NewIdx: Integer);
   begin
@@ -91,7 +92,11 @@ begin
           CurrentPage := PageControl.Page[TargetIndex];
           // DeletePersistent removes the node; DeletePage is not needed
           if Assigned(GlobalDesignHook) then
+          begin
+            CurrentTab := CurrentPage.Tab;
+            GlobalDesignHook.DeletePersistent(TPersistent(CurrentTab));
             GlobalDesignHook.DeletePersistent(TPersistent(CurrentPage));
+          end;
           //PageControl.DeletePage(TargetIndex);
         end;
       end;
