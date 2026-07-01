@@ -57,6 +57,7 @@ type
     property Height stored False;
     property Align stored False;
     property Visible stored False;
+    property BorderWidth stored False;
 
     property Caption;
     property StripeColor: TColor read FStripeColor write SetStripeColor default clNone;
@@ -71,7 +72,6 @@ type
     property OnBeforeShow: TBeforeShowExtPageEvent read FOnBeforeShow write FOnBeforeShow;
 
     property Color;
-    property BorderWidth;
     property ChildSizing;
     property Enabled;
     property Font;
