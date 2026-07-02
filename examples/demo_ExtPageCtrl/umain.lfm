@@ -42,8 +42,7 @@ object Form1: TForm1
     ButtonImageIndexes.CloseIndex = 3
     PageIndex = 0
     object ExtPage1: TExtPage
-      Caption = 'Position'
-      ImageIndex = 14
+      Color = clNone
       ParentColor = False
       object RadioGroup1: TRadioGroup
         Left = 0
@@ -76,8 +75,6 @@ object Form1: TForm1
       end
     end
     object ExtPage2: TExtPage
-      Caption = 'Style'
-      ImageIndex = 4
       object RadioGroup2: TRadioGroup
         Left = 0
         Height = 117
@@ -94,8 +91,8 @@ object Form1: TForm1
         ChildSizing.ShrinkVertical = crsScaleChilds
         ChildSizing.Layout = cclLeftToRightThenTopToBottom
         ChildSizing.ControlsPerLine = 1
-        ClientHeight = 90
-        ClientWidth = 304
+        ClientHeight = 117
+        ClientWidth = 314
         ItemIndex = 0
         Items.Strings = (
           'etsFlat'
@@ -109,9 +106,6 @@ object Form1: TForm1
       end
     end
     object ExtPage3: TExtPage
-      Caption = 'Options'
-      ImageIndex = 8
-      ShowCloseButton = False
       object cbShowNewTabBtn: TCheckBox
         AnchorSideLeft.Control = ExtPage3
         AnchorSideTop.Control = ExtPage3

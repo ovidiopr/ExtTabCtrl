@@ -146,6 +146,7 @@ type
     FShowCloseButton: Boolean;
     FTextWidth: Integer;
     FTextHeight: Integer;
+    FOnChange: TNotifyEvent;
     procedure SetCaption(AValue: TCaption);
     procedure SetColor(AValue: TColor);
     procedure SetStripeColor(AValue: TColor);
@@ -158,13 +159,15 @@ type
   protected
     FBoundRect: TRect;
     function GetDisplayName: String; override;
+
+    procedure DoChange; virtual;
   public
     constructor Create(ACollection: TCollection); override;
     destructor Destroy; override;
-
     function GetOwner: TPersistent; override;
 
     property BoundRect: TRect read FBoundRect;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   published
     property Caption: TCaption read FCaption write SetCaption;
     property Color: TColor read FColor write SetColor default clNone;
@@ -894,6 +897,11 @@ begin
 end;
 
 { TExtTab }
+procedure TExtTab.DoChange;
+begin
+  if Assigned(FOnChange) then FOnChange(Self);
+end;
+
 procedure TExtTab.SetCaption(AValue: TCaption);
 begin
   if FCaption <> AValue then
@@ -903,6 +911,7 @@ begin
     FTextHeight := -1;
     Changed(False);
     Redraw(Self);
+    DoChange;
   end;
 end;
 
@@ -912,6 +921,7 @@ begin
   FColor := AValue;
   if Assigned(FOwnerCtrl) then
     FOwnerCtrl.Invalidate;
+  DoChange;
 end;
 
 procedure TExtTab.SetStripeColor(AValue: TColor);
@@ -920,6 +930,7 @@ begin
   FStripeColor := AValue;
   if Assigned(FOwnerCtrl) then
     FOwnerCtrl.Invalidate;
+  DoChange;
 end;
 
 procedure TExtTab.SetVisible(AValue: Boolean);
@@ -964,11 +975,13 @@ begin
     FOwnerCtrl.InvalidateLayout;
     if Assigned(FOwnerCtrl.FOnTabChanged) then
       FOwnerCtrl.FOnTabChanged(FOwnerCtrl, Candidate);
+    DoChange;
   end
   else
   begin
     FVisible := AValue;
     FOwnerCtrl.InvalidateLayout;
+    DoChange;
   end;
 end;
 
@@ -985,6 +998,7 @@ begin
   FShowCloseButton := AValue;
   if Assigned(FOwnerCtrl) then
     FOwnerCtrl.InvalidateLayout;
+  DoChange;
 end;
 
 procedure TExtTab.SetImage(AValue: TBitmap);
@@ -995,6 +1009,7 @@ begin
   FTextWidth := -1;
   Redraw(Self);
   if Assigned(FOwnerCtrl) then FOwnerCtrl.UpdateTabSizeForImages;
+  DoChange;
 end;
 
 procedure TExtTab.SetImageIndex(AValue: TImageIndex);
@@ -1006,6 +1021,7 @@ begin
   Redraw(Self);
   if Assigned(FOwnerCtrl) then
     FOwnerCtrl.UpdateTabSizeForImages;
+  DoChange;
 end;
 
 procedure TExtTab.Redraw(Sender: TObject);
@@ -1014,6 +1030,8 @@ begin
   begin
     FTextWidth := -1;
     FTextHeight := -1;
+
+    DoChange;
   end;
   if Assigned(FOwnerCtrl) then FOwnerCtrl.InvalidateLayout;
 end;

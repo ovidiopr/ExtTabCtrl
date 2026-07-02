@@ -186,6 +186,7 @@ begin
   RegisterPropertyEditor(TypeInfo(Integer), TExtPage, 'Height', THiddenPropertyEditor);
   RegisterPropertyEditor(TypeInfo(Boolean), TExtPage, 'Visible', THiddenPropertyEditor);
   RegisterPropertyEditor(TypeInfo(TAlign), TExtPage, 'Align', THiddenPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TCaption), TExtPage, 'Caption', THiddenPropertyEditor);
 end;
 
 end.

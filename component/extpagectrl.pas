@@ -20,35 +20,25 @@ type
   private
     FPageCtrl: TExtPageCtrl;
     FTab: TExtTab;
-
-    FStripeColor: TColor;
     FValue: String;
-    FFontOptions: TExtFontOptions;
-    FImage: TBitmap;
-    FImageIndex: TImageIndex;
     FPageHint: String;
-    FShowCloseButton: Boolean;
+    FSyncingFromTab: Boolean;
 
     FOnBeforeShow: TBeforeShowExtPageEvent;
     function GetPageIndex: Integer;
 
-    procedure SetStripeColor(AValue: TColor);
-    procedure SetTabVisible(AValue: Boolean);
-    function GetTabVisible: Boolean;
-    procedure SetImage(AValue: TBitmap);
-    function GetImage: TBitmap;
-    procedure SetImageIndex(AValue: TImageIndex);
-    procedure SetShowCloseButton(AValue: Boolean);
-    procedure FontOptionsChanged(Sender: TObject);
+    // Connect the Tab with the Page
+    procedure LinkTab(ATab: TExtTab);
+    procedure UnlinkTab;
+    procedure SyncToTab;
+    procedure TabChanged(Sender: TObject);
   protected
-    // Intercept caption and color changes so the paired tab stays in sync
-    procedure CMTextChanged(var Message: TLMessage); message CM_TEXTCHANGED;
+    // Intercept Color changes so the paired tab stays in sync
     procedure CMColorChanged(var Message: TLMessage); message CM_COLORCHANGED;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    property Tab: TExtTab read FTab;
     property PageIndex: Integer read GetPageIndex;
   published
     property Left stored False;
@@ -57,16 +47,12 @@ type
     property Height stored False;
     property Align stored False;
     property Visible stored False;
+    property Caption stored False;
 
-    property Caption;
-    property StripeColor: TColor read FStripeColor write SetStripeColor default clNone;
-    property TabVisible: Boolean read GetTabVisible write SetTabVisible default True;
+    property Tab: TExtTab read FTab stored False;
+
     property Value: String read FValue write FValue;
-    property FontOptions: TExtFontOptions read FFontOptions;
-    property Image: TBitmap read GetImage write SetImage;
-    property ImageIndex: TImageIndex read FImageIndex write SetImageIndex default -1;
     property PageHint: String read FPageHint write FPageHint;
-    property ShowCloseButton: Boolean read FShowCloseButton write SetShowCloseButton default True;
 
     property OnBeforeShow: TBeforeShowExtPageEvent read FOnBeforeShow write FOnBeforeShow;
 
@@ -185,40 +171,20 @@ begin
   Align := alClient;
   Visible := False;
   Caption := '';
-  FStripeColor := clNone;
-  FImageIndex := -1;
-  FShowCloseButton := True;
-  FFontOptions := TExtFontOptions.Create;
-  FFontOptions.OnRedraw := @FontOptionsChanged;
 end;
 
 destructor TExtPage.Destroy;
 begin
-  FFontOptions.Free;
-  FImage.Free;
+  UnlinkTab;
   inherited Destroy;
-end;
-
-procedure TExtPage.FontOptionsChanged(Sender: TObject);
-begin
-  if Assigned(FTab) then
-  begin
-    FTab.FontOptions.Assign(FFontOptions);
-    if Assigned(FPageCtrl) then FPageCtrl.Invalidate;
-  end;
-end;
-
-procedure TExtPage.CMTextChanged(var Message: TLMessage);
-begin
-  inherited;
-  // Caption changed: keep the paired tab caption in sync
-  if Assigned(FTab) then FTab.Caption := Caption;
 end;
 
 procedure TExtPage.CMColorChanged(var Message: TLMessage);
 begin
   inherited;
-  if Assigned(FTab) then FTab.Color := Color;
+
+  if (not FSyncingFromTab) and Assigned(FTab) then
+    FTab.Color := Color;
 end;
 
 function TExtPage.GetPageIndex: Integer;
@@ -229,52 +195,45 @@ begin
     Result := -1;
 end;
 
-procedure TExtPage.SetStripeColor(AValue: TColor);
+{ Connect the Tab with the Page }
+
+procedure TExtPage.LinkTab(ATab: TExtTab);
 begin
-  if FStripeColor = AValue then Exit;
-  FStripeColor := AValue;
-  if Assigned(FTab) then FTab.StripeColor := AValue;
+  if FTab = ATab then Exit;
+  UnlinkTab;
+  FTab := ATab;
+  if not Assigned(FTab) then Exit;
+
+  SyncToTab;
+  FTab.OnChange := @TabChanged;
 end;
 
-function TExtPage.GetTabVisible: Boolean;
+procedure TExtPage.UnlinkTab;
 begin
-  if Assigned(FTab) then
-    Result := FTab.Visible
-  else
-    Result := True;
+  if not Assigned(FTab) then Exit;
+  FTab.OnChange := nil;
+  FTab := nil;
 end;
 
-procedure TExtPage.SetTabVisible(AValue: Boolean);
+procedure TExtPage.SyncToTab;
 begin
-  if Assigned(FTab) then FTab.Visible := AValue;
+  if not Assigned(FTab) then Exit;
+
+  // Update if not tracking the parent's color
+  if not ParentColor then
+    FTab.Color := Color;
 end;
 
-function TExtPage.GetImage: TBitmap;
+procedure TExtPage.TabChanged(Sender: TObject);
 begin
-  if FImage = nil then FImage := TBitmap.Create;
-  Result := FImage;
-end;
-
-procedure TExtPage.SetImage(AValue: TBitmap);
-begin
-  if FImage = AValue then Exit;
-  FreeAndNil(FImage);
-  FImage := AValue;
-  if Assigned(FTab) then FTab.Image := AValue;
-end;
-
-procedure TExtPage.SetImageIndex(AValue: TImageIndex);
-begin
-  if FImageIndex = AValue then Exit;
-  FImageIndex := AValue;
-  if Assigned(FTab) then FTab.ImageIndex := AValue;
-end;
-
-procedure TExtPage.SetShowCloseButton(AValue: Boolean);
-begin
-  if FShowCloseButton = AValue then Exit;
-  FShowCloseButton := AValue;
-  if Assigned(FTab) then FTab.ShowCloseButton := AValue;
+  if not Assigned(FTab) then Exit;
+  if Color = FTab.Color then Exit;
+  FSyncingFromTab := True;
+  try
+    Color := FTab.Color;
+  finally
+    FSyncingFromTab := False;
+  end;
 end;
 
 { TExtPageCtrl }
@@ -485,6 +444,10 @@ begin
   // Forward to the user's OnTabDeleting handler (may set Allow := False).
   if Assigned(FUserOnTabDeleting) then
     FUserOnTabDeleting(Sender, Index, Allow);
+
+  // If the deletion is going ahead, unlink FTab now
+  if Allow and Assigned(DyingPage) then
+    DyingPage.UnlinkTab;
 end;
 
 procedure TExtPageCtrl.InternalTabDeleted(Sender: TObject);
@@ -565,8 +528,7 @@ begin
       NewPage.FPageCtrl := Self;
       FPageList.Add(NewPage);
       NewPage.Name := GetUniquePageName;
-      NewPage.Caption := ACaption;
-      NewPage.FTab := NewTab;
+      NewPage.LinkTab(NewTab);
       NewPage.Parent := Self;
       NewPage.Align := alClient;
       NewPage.Visible := False;
@@ -701,13 +663,13 @@ begin
     i := FPageList.Count;
 
     if Assigned(Tabs) and (i < Tabs.Count) then
-      StreamedPage.FTab := Tabs[i]
+      StreamedPage.LinkTab(Tabs[i])
     else
     begin
       FIsSyncing := True;
       try
-        NewTab := inherited AddTab(StreamedPage.Caption);
-        StreamedPage.FTab := NewTab;
+        NewTab := inherited AddTab(StreamedPage.Name);
+        StreamedPage.LinkTab(NewTab);
       finally
         FIsSyncing := False;
       end;
@@ -784,7 +746,7 @@ begin
       if not Found then
       begin
         FPageList.Delete(i);
-        P.FTab := nil;
+        P.UnlinkTab;
         P.FPageCtrl := nil;
         P.Parent := nil;
         Application.ReleaseComponent(P);
@@ -819,12 +781,12 @@ begin
       if FPageList.IndexOf(P) < 0 then
       begin
         if Assigned(Tabs) and (TabIdx < Tabs.Count) then
-          P.FTab := Tabs[TabIdx]
+          P.LinkTab(Tabs[TabIdx])
         else
         begin
           FIsSyncing := True;
           try
-            P.FTab := inherited AddTab(P.Caption);
+            P.LinkTab(inherited AddTab(P.Name));
           finally
             FIsSyncing := False;
           end;
