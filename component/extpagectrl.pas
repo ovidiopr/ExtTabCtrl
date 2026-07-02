@@ -260,28 +260,36 @@ end;
 { Private helpers }
 
 function TExtPageCtrl.GetUniquePageName: String;
+const
+  BaseName = 'ExtPage';
 var
-  i, j: Integer;
-  BaseName: String;
+  ExistingNames: TStringList;
+  i, Suffix: Integer;
   OwnerComp: TComponent;
 begin
   OwnerComp := Owner;
-  if (OwnerComp = nil) then OwnerComp := Self;
+  if OwnerComp = nil then OwnerComp := Self;
 
-  BaseName := 'ExtPage';
-  Result := BaseName + '1';
+  // Collect all used names
+  ExistingNames := TStringList.Create;
+  try
+    ExistingNames.CaseSensitive := False;
+    ExistingNames.Sorted := True;
+    ExistingNames.Duplicates := dupIgnore;
+    for i := 0 to OwnerComp.ComponentCount - 1 do
+      if OwnerComp.Components[i].Name <> '' then
+        ExistingNames.Add(OwnerComp.Components[i].Name);
 
-  i := 0;
-  while True do
-  begin
-    j := OwnerComp.ComponentCount - 1;
-    while (j >= 0) and (CompareText(Result, OwnerComp.Components[j].Name) <> 0) do
-      Dec(j);
-    if j < 0 then Exit;
-    Inc(i);
-    if BaseName[Length(BaseName)] in ['0'..'9'] then
-      BaseName := BaseName + '_';
-    Result := BaseName + IntToStr(i);
+    // Assign a unique name
+    Suffix := 1;
+    Result := BaseName + IntToStr(Suffix);
+    while ExistingNames.IndexOf(Result) >= 0 do
+    begin
+      Inc(Suffix);
+      Result := BaseName + IntToStr(Suffix);
+    end;
+  finally
+    ExistingNames.Free;
   end;
 end;
 
@@ -441,9 +449,15 @@ begin
   if Assigned(FUserOnTabDeleting) then
     FUserOnTabDeleting(Sender, Index, Allow);
 
-  // If the deletion is going ahead, unlink FTab now
+  // If the deletion is going ahead, detach and release the page
   if Allow and Assigned(DyingPage) then
+  begin
+    FPageList.Remove(DyingPage);
     DyingPage.UnlinkTab;
+    DyingPage.FPageCtrl := nil;
+    DyingPage.Parent := nil;
+    Application.ReleaseComponent(DyingPage);
+  end;
 end;
 
 procedure TExtPageCtrl.InternalTabDeleted(Sender: TObject);
@@ -504,6 +518,7 @@ var
   OwnerComp: TComponent;
 begin
   Result := nil;
+  NewPage := nil;
 
   FIsSyncing := True;
   try
@@ -516,7 +531,6 @@ begin
   OwnerComp := Owner;
   if OwnerComp = nil then OwnerComp := Self;
 
-  // Roll back the tab we just created if page construction fails
   try
     FIsSyncing := True;
     try
@@ -533,8 +547,17 @@ begin
       FIsSyncing := False;
     end;
   except
+    // Roll back both the page and the tab we just created if anything fails
     FIsSyncing := True;
     try
+      if Assigned(NewPage) then
+      begin
+        FPageList.Remove(NewPage);
+        NewPage.UnlinkTab;
+        NewPage.FPageCtrl := nil;
+        NewPage.Parent := nil;
+        NewPage.Free;
+      end;
       inherited DeleteTab(NewTab.Index);
     finally
       FIsSyncing := False;
