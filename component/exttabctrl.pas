@@ -544,6 +544,17 @@ end;
 // Vector icon helpers
 // Each helper draws into a TBitmap that is already the correct size
 
+const
+  // Scroll-arrow (prev/next) glyph colors
+  cScrollGlyphColorLight = $009E4320;
+  cScrollGlyphColorDark  = $00F79A6D;
+  // Add (+) glyph colors
+  cAddGlyphColorLight = $00146E20;
+  cAddGlyphColorDark  = $005CD66A;
+  // Close (x) glyph colors
+  cCloseGlyphColorNormal = $004040CC;
+  cCloseGlyphColorHover  = clRed;
+
 procedure DrawBtnScroll(ACanvas: TCanvas; ARect: TRect; ANext, AHorizontal: Boolean);
 var
   ASize, CX, CY, R: Integer;
@@ -590,10 +601,10 @@ begin
       end;
     end;
 
-    ACanvas.Pen.Color := IfThen(IsDarkMode, $00F79A6D, $009E4320);
+    ACanvas.Pen.Color := IfThen(IsDarkMode, cScrollGlyphColorDark, cScrollGlyphColorLight);
     ACanvas.Pen.Width := 1;
     ACanvas.Pen.Style := psSolid;
-    ACanvas.Brush.Color := IfThen(IsDarkMode, $009E4320, $00F79A6D);
+    ACanvas.Brush.Color := IfThen(IsDarkMode, cScrollGlyphColorLight, cScrollGlyphColorDark);
     ACanvas.Brush.Style := bsSolid;
 
     ACanvas.Polygon(P);
@@ -636,10 +647,10 @@ begin
     P[10] := Point(CX - L, CY - W); // Left arm, top-right
     P[11] := Point(CX - W, CY - W); // Inner corner top-left
 
-    ACanvas.Pen.Color := IfThen(IsDarkMode, $005CD66A, $00146E20);
+    ACanvas.Pen.Color := IfThen(IsDarkMode, cAddGlyphColorDark, cAddGlyphColorLight);
     ACanvas.Pen.Width := 1;
     ACanvas.Pen.Style := psSolid;
-    ACanvas.Brush.Color := IfThen(IsDarkMode, $00146E20, $005CD66A);
+    ACanvas.Brush.Color := IfThen(IsDarkMode, cAddGlyphColorLight, cAddGlyphColorDark);
     ACanvas.Brush.Style := bsSolid;
 
     ACanvas.Polygon(P);
@@ -664,7 +675,7 @@ begin
     D := Max(3, (Min(ARect.Width, ARect.Height) - 2) div 3);  // reach from centre
     H := Max(1, D div 3);   // arm half-thickness
 
-    XClr := IfThen(IsHover, clRed, TColor($004040CC));
+    XClr := IfThen(IsHover, cCloseGlyphColorHover, TColor(cCloseGlyphColorNormal));
 
     // First arm: top-left --> bottom-right (12 vertices, clock-wise)
     P[ 0] := Point(CX - D, CY - D + H);   // left arm, top-left
